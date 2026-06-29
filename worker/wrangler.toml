@@ -1,0 +1,16 @@
+name = "pawnnexus-api"
+main = "src/index.ts"
+compatibility_date = "2026-06-29"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pawnnexus"
+database_id = "replace-with-d1-database-id"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "pawnnexus-images"
+
+[vars]
+PUBLIC_IMAGE_BASE_URL = "https://images.example.com"
