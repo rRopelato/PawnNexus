@@ -8,6 +8,14 @@ type ProcessedImage = {
   thumb: File;
 };
 
+type OutputFormat = {
+  mimeType: 'image/webp' | 'image/jpeg';
+  extension: 'webp' | 'jpg';
+};
+
+const webpFormat: OutputFormat = { mimeType: 'image/webp', extension: 'webp' };
+const jpegFormat: OutputFormat = { mimeType: 'image/jpeg', extension: 'jpg' };
+
 export async function processPawnImages(files: File[]) {
   if (files.length < 1) throw new Error('Select at least one image.');
   if (files.length > maxImages) throw new Error('You can upload at most 5 images.');
@@ -19,11 +27,11 @@ export async function processPawnImages(files: File[]) {
     const bitmap = await createImageBitmap(file).catch(() => null);
     if (!bitmap) throw new Error(`${file.name} is not a valid image.`);
 
-    const full = await renderWebp(bitmap, fitInside(bitmap.width, bitmap.height, 1920, 1080), 0.86, 'imagem.webp');
-    const thumb = await renderWebp(bitmap, fitWidth(bitmap.width, bitmap.height, 400), 0.78, 'thumb.webp');
-    bitmap.close();
-
-    processed.push({ original: file, image: full, thumb });
+    try {
+      processed.push({ original: file, ...(await renderImagePair(bitmap)) });
+    } finally {
+      bitmap.close();
+    }
   }
 
   return processed;
@@ -37,6 +45,30 @@ function validateOriginal(file: File) {
   if (file.size > maxOriginalBytes) {
     throw new Error(`${file.name} must be 5 MB or less.`);
   }
+}
+
+async function renderImagePair(bitmap: ImageBitmap) {
+  const fullSize = fitInside(bitmap.width, bitmap.height, 1920, 1080);
+  const thumbSize = fitWidth(bitmap.width, bitmap.height, 400);
+
+  const webp = await renderPairAs(bitmap, fullSize, thumbSize, webpFormat).catch(() => null);
+  if (webp) return webp;
+
+  const jpeg = await renderPairAs(bitmap, fullSize, thumbSize, jpegFormat).catch(() => null);
+  if (jpeg) return jpeg;
+
+  throw new Error('This browser could not process this image. Please try another image or upload from desktop.');
+}
+
+async function renderPairAs(
+  bitmap: ImageBitmap,
+  fullSize: { width: number; height: number },
+  thumbSize: { width: number; height: number },
+  format: OutputFormat,
+) {
+  const image = await renderImage(bitmap, fullSize, 0.86, `image.${format.extension}`, format);
+  const thumb = await renderImage(bitmap, thumbSize, 0.78, `thumb.${format.extension}`, format);
+  return { image, thumb };
 }
 
 function fitInside(width: number, height: number, maxWidth: number, maxHeight: number) {
@@ -55,9 +87,22 @@ function fitWidth(width: number, height: number, targetWidth: number) {
   };
 }
 
-async function renderWebp(bitmap: ImageBitmap, size: { width: number; height: number }, quality: number, name: string) {
-  let blob: Blob | null = null;
+async function renderImage(
+  bitmap: ImageBitmap,
+  size: { width: number; height: number },
+  quality: number,
+  name: string,
+  format: OutputFormat,
+) {
+  const blob = await renderBlob(bitmap, size, quality, format.mimeType);
+  if (!blob || blob.type !== format.mimeType) {
+    throw new Error('Unable to process image.');
+  }
 
+  return new File([blob], name, { type: format.mimeType });
+}
+
+async function renderBlob(bitmap: ImageBitmap, size: { width: number; height: number }, quality: number, mimeType: string) {
   if ('OffscreenCanvas' in window) {
     const canvas = new OffscreenCanvas(size.width, size.height);
     const context = canvas.getContext('2d');
@@ -68,32 +113,22 @@ async function renderWebp(bitmap: ImageBitmap, size: { width: number; height: nu
     context.imageSmoothingQuality = 'high';
     context.drawImage(bitmap, 0, 0, size.width, size.height);
 
-    blob = await canvas.convertToBlob({
-      type: 'image/webp',
-      quality,
-    }).catch(() => null);
+    const blob = await canvas.convertToBlob({ type: mimeType, quality }).catch(() => null);
+    if (blob?.type === mimeType) return blob;
   }
 
-  if (!blob) {
-    const canvas = document.createElement('canvas');
-    canvas.width = size.width;
-    canvas.height = size.height;
+  const canvas = document.createElement('canvas');
+  canvas.width = size.width;
+  canvas.height = size.height;
 
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('Unable to process image.');
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Unable to process image.');
 
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = 'high';
-    context.drawImage(bitmap, 0, 0, size.width, size.height);
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(bitmap, 0, 0, size.width, size.height);
 
-    blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, 'image/webp', quality);
-    });
-  }
-
-  if (!blob || blob.type !== 'image/webp') {
-    throw new Error('This browser could not convert the image to WebP. Please try Chrome, Firefox, or upload from desktop.');
-  }
-
-  return new File([blob], name, { type: 'image/webp' });
+  return new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, mimeType, quality);
+  });
 }

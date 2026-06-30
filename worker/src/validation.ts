@@ -83,14 +83,25 @@ export async function validateOriginalImageUpload(file: File) {
   return realType;
 }
 
-export async function validateProcessedWebp(file: File, name: string) {
-  if (file.size === 0) throw new HTTPException(400, { message: `${name} is empty` });
-  if (file.size > maxUploadBytes) throw new HTTPException(400, { message: `${name} is too large` });
+export async function validateProcessedImageUpload(file: File, name: string) {
+  if (file.size === 0) throw new HTTPException(400, { message: name + " is empty" });
+  if (file.size > maxUploadBytes) throw new HTTPException(400, { message: name + " is too large" });
 
   const bytes = new Uint8Array(await file.arrayBuffer());
-  if (detectImageType(bytes) !== 'image/webp' || !hasValidImageContainer(bytes, 'image/webp')) {
-    throw new HTTPException(400, { message: `${name} must be a valid WebP image` });
+  const realType = detectImageType(bytes);
+
+  if (!realType || !["image/webp", "image/jpeg"].includes(realType) || !hasValidImageContainer(bytes, realType)) {
+    throw new HTTPException(400, { message: name + " must be a valid WebP or JPEG image" });
   }
+
+  if (file.type && file.type !== realType) {
+    throw new HTTPException(400, { message: name + " type does not match its real image content" });
+  }
+
+  return {
+    contentType: realType,
+    extension: realType === "image/webp" ? "webp" : "jpg",
+  };
 }
 
 export function validatePawnImages(value: unknown) {

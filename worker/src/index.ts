@@ -20,7 +20,7 @@ import {
   requireString,
   validateEmail,
   validateOriginalImageUpload,
-  validateProcessedWebp,
+  validateProcessedImageUpload,
   validateLoginIdentifier,
   validatePassword,
   validatePawnPayload,
@@ -323,19 +323,19 @@ app.post("/upload", requireAuth, async (c) => {
     }
 
     await validateOriginalImageUpload(original);
-    await validateProcessedWebp(image, "image");
-    await validateProcessedWebp(thumb, "thumbnail");
+    const imageMeta = await validateProcessedImageUpload(image, "image");
+    const thumbMeta = await validateProcessedImageUpload(thumb, "thumbnail");
 
     const id = crypto.randomUUID();
     const baseKey = "pawns/" + id;
-    const imageKey = baseKey + "/imagem.webp";
-    const thumbKey = baseKey + "/thumb.webp";
+    const imageKey = baseKey + "/image." + imageMeta.extension;
+    const thumbKey = baseKey + "/thumb." + thumbMeta.extension;
 
     await c.env.IMAGES.put(imageKey, image.stream(), {
-      httpMetadata: { contentType: "image/webp" },
+      httpMetadata: { contentType: imageMeta.contentType },
     });
     await c.env.IMAGES.put(thumbKey, thumb.stream(), {
-      httpMetadata: { contentType: "image/webp" },
+      httpMetadata: { contentType: thumbMeta.contentType },
     });
 
     images.push({
