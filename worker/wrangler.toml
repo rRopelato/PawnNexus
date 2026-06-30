@@ -5,7 +5,7 @@ compatibility_date = "2026-06-29"
 [[d1_databases]]
 binding = "DB"
 database_name = "pawnnexus"
-database_id = "replace-with-d1-database-id"
+database_id = "7c6ee7c6-5d4c-4753-9d4f-8ef65be4fdd3"
 migrations_dir = "migrations"
 
 [[r2_buckets]]

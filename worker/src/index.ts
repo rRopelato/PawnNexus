@@ -32,7 +32,12 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 app.use(
   '*',
   cors({
-    origin: ['http://localhost:5173'],
+    origin: [
+      'http://localhost:5173',
+      'https://pawnnexus.com',
+      'https://www.pawnnexus.com',
+      'https://pawnnexus.pages.dev',
+    ],
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   }),
