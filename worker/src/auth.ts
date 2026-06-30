@@ -10,7 +10,7 @@ export async function hashPassword(password: string) {
     {
       name: 'PBKDF2',
       salt,
-      iterations: 120_000,
+      iterations: 100_000,
       hash: 'SHA-256',
     },
     key,
