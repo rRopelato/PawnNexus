@@ -36,6 +36,12 @@ export type BannedEmailRow = {
   created_at: string;
 };
 
+export type PawnImage = {
+  imageUrl: string;
+  thumbUrl: string;
+  sortOrder: number;
+};
+
 export type PawnRow = {
   id: string;
   user_id: string;
@@ -55,6 +61,8 @@ export type PawnRow = {
   psn_id: string | null;
   xbox_gamertag: string | null;
   image_url: string;
+  image_urls: string;
+  thumbnail_url: string | null;
   status: 'pending' | 'approved' | 'rejected';
   activity_stars: number;
   last_refreshed_at: string;

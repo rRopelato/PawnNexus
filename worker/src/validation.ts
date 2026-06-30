@@ -1,11 +1,13 @@
 import { HTTPException } from 'hono/http-exception';
+import type { PawnImage } from './types';
 
 const platforms = new Set(['Steam', 'Nintendo Switch', 'PlayStation', 'Xbox']);
 const vocations = new Set(['Fighter', 'Archer', 'Mage', 'Thief', 'Warrior', 'Sorcerer']);
 const inclinations = new Set(['Kindhearted', 'Calm', 'Straightforward', 'Simple']);
 const genders = new Set(['Female', 'Male', 'Unspecified']);
 const races = new Set(['Human', 'Beastren']);
-const allowedImageTypes = new Set(['image/jpeg', 'image/png']);
+const maxPawnImages = 5;
+const maxUploadBytes = 5 * 1024 * 1024;
 
 export function requireString(value: unknown, name: string, maxLength = 160) {
   if (typeof value !== 'string' || value.trim().length === 0) {
@@ -62,21 +64,51 @@ export function validatePassword(value: unknown) {
   return password;
 }
 
-export function validateImageUpload(file: File) {
-  if (!allowedImageTypes.has(file.type)) {
-    throw new HTTPException(400, { message: 'file must be a JPG, JPEG, or PNG image' });
+export async function validateOriginalImageUpload(file: File) {
+  if (file.size === 0) throw new HTTPException(400, { message: 'image is empty' });
+  if (file.size > maxUploadBytes) {
+    throw new HTTPException(400, { message: 'each image must be 5MB or less' });
   }
 
-  const extension = file.name.split('.').pop()?.toLowerCase();
-  if (!extension || !['jpg', 'jpeg', 'png'].includes(extension)) {
-    throw new HTTPException(400, { message: 'file extension must be jpg, jpeg, or png' });
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const realType = detectImageType(bytes);
+  if (!realType || !['image/jpeg', 'image/png', 'image/webp'].includes(realType) || !hasValidImageContainer(bytes, realType)) {
+    throw new HTTPException(400, { message: 'file must be a valid JPG, JPEG, PNG, or WebP image' });
   }
 
-  if (file.size > 5 * 1024 * 1024) {
-    throw new HTTPException(400, { message: 'file must be 5MB or less' });
+  if (file.type && file.type !== realType) {
+    throw new HTTPException(400, { message: 'file type does not match its real image content' });
   }
 
-  return extension === 'jpeg' ? 'jpg' : extension;
+  return realType;
+}
+
+export async function validateProcessedWebp(file: File, name: string) {
+  if (file.size === 0) throw new HTTPException(400, { message: `${name} is empty` });
+  if (file.size > maxUploadBytes) throw new HTTPException(400, { message: `${name} is too large` });
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (detectImageType(bytes) !== 'image/webp' || !hasValidImageContainer(bytes, 'image/webp')) {
+    throw new HTTPException(400, { message: `${name} must be a valid WebP image` });
+  }
+}
+
+export function validatePawnImages(value: unknown) {
+  if (!Array.isArray(value)) throw new HTTPException(400, { message: 'images is required' });
+  if (value.length < 1) throw new HTTPException(400, { message: 'at least one image is required' });
+  if (value.length > maxPawnImages) throw new HTTPException(400, { message: 'a pawn can have at most 5 images' });
+
+  return value.map((item, index) => {
+    if (!item || typeof item !== 'object') throw new HTTPException(400, { message: 'images is invalid' });
+    const image = item as Partial<PawnImage>;
+    const imageUrl = requireString(image.imageUrl, 'imageUrl', 500);
+    const thumbUrl = requireString(image.thumbUrl, 'thumbUrl', 500);
+    const sortOrder = Number(image.sortOrder ?? index);
+    if (!Number.isInteger(sortOrder) || sortOrder < 0 || sortOrder >= maxPawnImages) {
+      throw new HTTPException(400, { message: 'image sortOrder is invalid' });
+    }
+    return { imageUrl, thumbUrl, sortOrder } satisfies PawnImage;
+  });
 }
 
 export function validatePawnPayload(body: Record<string, unknown>) {
@@ -111,6 +143,7 @@ export function validatePawnPayload(body: Record<string, unknown>) {
   if (platform === 'PlayStation' && !psnId) throw new HTTPException(400, { message: 'psnId is required for PlayStation pawns' });
   if (platform === 'Xbox' && !xboxGamertag) throw new HTTPException(400, { message: 'xboxGamertag is required for Xbox pawns' });
 
+  const images = validatePawnImages(body.images);
   const skills = normalizeSkills(body.skills);
 
   return {
@@ -129,7 +162,9 @@ export function validatePawnPayload(body: Record<string, unknown>) {
     switchFriendId: platform === 'Nintendo Switch' ? switchFriendId : null,
     psnId: platform === 'PlayStation' ? psnId : null,
     xboxGamertag: platform === 'Xbox' ? xboxGamertag : null,
-    imageUrl: requireString(body.imageUrl, 'imageUrl', 500),
+    images,
+    imageUrl: images[0].imageUrl,
+    thumbnailUrl: images[0].thumbUrl,
   };
 }
 
@@ -144,4 +179,34 @@ function normalizeSkills(value: unknown) {
   if (skills.length > 12) throw new HTTPException(400, { message: 'skills must include 12 entries or fewer' });
 
   return skills.join('\n');
+}
+
+function detectImageType(bytes: Uint8Array) {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+    bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50
+  ) return 'image/webp';
+  return null;
+}
+
+function hasValidImageContainer(bytes: Uint8Array, type: string) {
+  if (type === 'image/jpeg') {
+    return bytes.length > 4 && bytes[bytes.length - 2] === 0xff && bytes[bytes.length - 1] === 0xd9;
+  }
+
+  if (type === 'image/png') {
+    const pngEnd = [0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82];
+    return bytes.length >= pngEnd.length && pngEnd.every((byte, index) => bytes[bytes.length - pngEnd.length + index] === byte);
+  }
+
+  if (type === 'image/webp') {
+    if (bytes.length < 16) return false;
+    const riffSize = bytes[4] | (bytes[5] << 8) | (bytes[6] << 16) | (bytes[7] << 24);
+    return riffSize + 8 <= bytes.length;
+  }
+
+  return false;
 }

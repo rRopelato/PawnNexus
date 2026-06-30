@@ -1,4 +1,4 @@
-import type { AdminStats, BannedEmail, Pawn, PawnFilters, User } from '../types';
+import type { AdminStats, BannedEmail, Pawn, PawnFilters, PawnImage, User } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
 const TOKEN_KEY = 'pawnnexus.token';
@@ -28,15 +28,10 @@ async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
 
   if (options.auth) {
     const token = getToken();
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
+    if (token) headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-  });
+  const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Request failed' }));
@@ -103,11 +98,16 @@ export const api = {
       auth: true,
     });
   },
-  async upload(file: File) {
+  async upload(images: Array<{ original: File; image: File; thumb: File }>) {
     const data = new FormData();
-    data.set('file', file);
+    data.set('count', String(images.length));
+    images.forEach((item, index) => {
+      data.set(`original_${index}`, item.original);
+      data.set(`image_${index}`, item.image);
+      data.set(`thumb_${index}`, item.thumb);
+    });
 
-    return request<{ imageUrl: string }>('/upload', {
+    return request<{ images: PawnImage[]; imageUrl: string; thumbnailUrl: string }>('/upload', {
       method: 'POST',
       body: data,
       auth: true,

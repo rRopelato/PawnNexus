@@ -1,8 +1,8 @@
-import { Calendar, Edit, RefreshCw, Star, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Calendar, ChevronLeft, ChevronRight, Edit, RefreshCw, Star, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../lib/api';
-import type { Pawn, User } from '../types';
+import type { Pawn, PawnImage, User } from '../types';
 
 export function PawnDetails({ user }: { user: User | null }) {
   const { id } = useParams();
@@ -49,13 +49,7 @@ export function PawnDetails({ user }: { user: User | null }) {
   return (
     <article className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-6">
-        <div className="overflow-hidden rounded border border-white/10 bg-ash-900">
-          {pawn.imageUrl ? (
-            <img src={pawn.imageUrl} alt={pawn.pawnName} className="max-h-[680px] w-full object-cover" />
-          ) : (
-            <div className="grid aspect-video place-items-center text-zinc-500">No screenshot</div>
-          )}
-        </div>
+        <ImageCarousel images={pawn.images} pawnName={pawn.pawnName} />
         <section className="space-y-3">
           <h1 className="text-4xl font-semibold text-white">{pawn.pawnName}</h1>
           <p className="whitespace-pre-line leading-7 text-zinc-300">{pawn.description}</p>
@@ -129,6 +123,74 @@ export function PawnDetails({ user }: { user: User | null }) {
   );
 }
 
+function ImageCarousel({ images, pawnName }: { images: PawnImage[]; pawnName: string }) {
+  const orderedImages = useMemo(() => [...images].sort((a, b) => a.sortOrder - b.sortOrder), [images]);
+  const [index, setIndex] = useState(0);
+  const [loaded, setLoaded] = useState(() => new Set([0]));
+
+  useEffect(() => {
+    if (orderedImages.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setIndex((current) => (current + 1) % orderedImages.length);
+    }, 8000);
+    return () => window.clearInterval(timer);
+  }, [orderedImages.length]);
+
+  useEffect(() => {
+    setLoaded((current) => new Set(current).add(index));
+  }, [index]);
+
+  if (orderedImages.length === 0) {
+    return <div className="grid aspect-video place-items-center rounded border border-white/10 bg-ash-900 text-zinc-500">No screenshot</div>;
+  }
+
+  function move(direction: number) {
+    setIndex((current) => (current + direction + orderedImages.length) % orderedImages.length);
+  }
+
+  return (
+    <section className="overflow-hidden rounded border border-white/10 bg-ash-900">
+      <div className="relative aspect-video bg-ash-850">
+        {orderedImages.map((image, imageIndex) => (
+          loaded.has(imageIndex) ? (
+            <img
+              key={image.imageUrl}
+              src={image.imageUrl}
+              alt={`${pawnName} screenshot ${imageIndex + 1}`}
+              loading={imageIndex === 0 ? 'eager' : 'lazy'}
+              decoding="async"
+              className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-300 ${imageIndex === index ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+            />
+          ) : null
+        ))}
+        {orderedImages.length > 1 ? (
+          <>
+            <button className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded bg-ash-950/80 text-white" onClick={() => move(-1)} aria-label="Previous image" title="Previous image">
+              <ChevronLeft size={22} />
+            </button>
+            <button className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded bg-ash-950/80 text-white" onClick={() => move(1)} aria-label="Next image" title="Next image">
+              <ChevronRight size={22} />
+            </button>
+          </>
+        ) : null}
+      </div>
+      {orderedImages.length > 1 ? (
+        <div className="flex justify-center gap-2 border-t border-white/10 p-3">
+          {orderedImages.map((image, imageIndex) => (
+            <button
+              key={image.thumbUrl}
+              className={`h-2.5 w-2.5 rounded-full ${imageIndex === index ? 'bg-ember-500' : 'bg-white/20'}`}
+              onClick={() => setIndex(imageIndex)}
+              aria-label={`Show image ${imageIndex + 1}`}
+              title={`Show image ${imageIndex + 1}`}
+            />
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function Info({ label, value, href }: { label: string; value: string; href?: string }) {
   return (
     <div>
@@ -147,21 +209,9 @@ function Info({ label, value, href }: { label: string; value: string; href?: str
 }
 
 function getPlatformContact(pawn: Pawn) {
-  if (pawn.platform === 'Steam' && pawn.steamUrl) {
-    return { label: 'Steam', value: pawn.steamUrl, href: pawn.steamUrl };
-  }
-
-  if (pawn.platform === 'Nintendo Switch' && pawn.switchFriendId) {
-    return { label: 'Friend ID', value: pawn.switchFriendId };
-  }
-
-  if (pawn.platform === 'PlayStation' && pawn.psnId) {
-    return { label: 'PSN ID', value: pawn.psnId };
-  }
-
-  if (pawn.platform === 'Xbox' && pawn.xboxGamertag) {
-    return { label: 'Gamertag', value: pawn.xboxGamertag };
-  }
-
+  if (pawn.platform === 'Steam' && pawn.steamUrl) return { label: 'Steam', value: pawn.steamUrl, href: pawn.steamUrl };
+  if (pawn.platform === 'Nintendo Switch' && pawn.switchFriendId) return { label: 'Friend ID', value: pawn.switchFriendId };
+  if (pawn.platform === 'PlayStation' && pawn.psnId) return { label: 'PSN ID', value: pawn.psnId };
+  if (pawn.platform === 'Xbox' && pawn.xboxGamertag) return { label: 'Gamertag', value: pawn.xboxGamertag };
   return null;
 }

@@ -19,7 +19,8 @@ import type { BannedEmailRow, Env, PawnRow, UserRow, Variables } from './types';
 import {
   requireString,
   validateEmail,
-  validateImageUpload,
+  validateOriginalImageUpload,
+  validateProcessedWebp,
   validateLoginIdentifier,
   validatePassword,
   validatePawnPayload,
@@ -189,8 +190,8 @@ app.post('/pawns', requireAuth, async (c) => {
     `INSERT INTO pawns (
       id, user_id, pawn_name, arisen_name, gender, race, platform, vocation, level, inclination,
       skills, description, pawn_id, steam_url, switch_friend_id, psn_id, xbox_gamertag,
-      image_url, status, activity_stars, last_refreshed_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      image_url, image_urls, thumbnail_url, status, activity_stars, last_refreshed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
   )
     .bind(
       id,
@@ -211,6 +212,8 @@ app.post('/pawns', requireAuth, async (c) => {
       payload.psnId,
       payload.xboxGamertag,
       payload.imageUrl,
+      JSON.stringify(payload.images),
+      payload.thumbnailUrl,
       'pending',
       3,
     )
@@ -235,7 +238,7 @@ app.put('/pawns/:id', requireAuth, async (c) => {
     `UPDATE pawns
      SET pawn_name = ?, arisen_name = ?, gender = ?, race = ?, platform = ?, vocation = ?, level = ?,
          inclination = ?, skills = ?, description = ?, pawn_id = ?, steam_url = ?,
-         switch_friend_id = ?, psn_id = ?, xbox_gamertag = ?, image_url = ?, status = ?,
+         switch_friend_id = ?, psn_id = ?, xbox_gamertag = ?, image_url = ?, image_urls = ?, thumbnail_url = ?, status = ?,
          updated_at = datetime('now')
      WHERE id = ?`,
   )
@@ -256,6 +259,8 @@ app.put('/pawns/:id', requireAuth, async (c) => {
       payload.psnId,
       payload.xboxGamertag,
       payload.imageUrl,
+      JSON.stringify(payload.images),
+      payload.thumbnailUrl,
       status,
       pawn.id,
     )
@@ -293,23 +298,49 @@ app.delete('/pawns/:id', requireAuth, async (c) => {
   return c.json({ ok: true });
 });
 
-app.post('/upload', requireAuth, async (c) => {
+app.post("/upload", requireAuth, async (c) => {
   const form = await c.req.formData();
-  const file = form.get('file');
+  const count = Number(form.get("count") ?? 0);
 
-  if (!(file instanceof File)) {
-    throw new HTTPException(400, { message: 'file is required' });
+  if (!Number.isInteger(count) || count < 1 || count > 5) {
+    throw new HTTPException(400, { message: "Upload between 1 and 5 images" });
   }
 
-  const extension = validateImageUpload(file);
-  const key = `pawns/${crypto.randomUUID()}.${extension}`;
-  await c.env.IMAGES.put(key, file.stream(), {
-    httpMetadata: {
-      contentType: file.type,
-    },
-  });
+  const images = [];
 
-  return c.json({ imageUrl: publicImageUrl(c.req.url, c.env.PUBLIC_IMAGE_BASE_URL, key) }, 201);
+  for (let index = 0; index < count; index += 1) {
+    const original = form.get("original_" + index);
+    const image = form.get("image_" + index);
+    const thumb = form.get("thumb_" + index);
+
+    if (!(original instanceof File) || !(image instanceof File) || !(thumb instanceof File)) {
+      throw new HTTPException(400, { message: "Each upload must include original, image, and thumbnail files" });
+    }
+
+    await validateOriginalImageUpload(original);
+    await validateProcessedWebp(image, "image");
+    await validateProcessedWebp(thumb, "thumbnail");
+
+    const id = crypto.randomUUID();
+    const baseKey = "pawns/" + id;
+    const imageKey = baseKey + "/imagem.webp";
+    const thumbKey = baseKey + "/thumb.webp";
+
+    await c.env.IMAGES.put(imageKey, image.stream(), {
+      httpMetadata: { contentType: "image/webp" },
+    });
+    await c.env.IMAGES.put(thumbKey, thumb.stream(), {
+      httpMetadata: { contentType: "image/webp" },
+    });
+
+    images.push({
+      imageUrl: publicImageUrl(c.req.url, c.env.PUBLIC_IMAGE_BASE_URL, imageKey),
+      thumbUrl: publicImageUrl(c.req.url, c.env.PUBLIC_IMAGE_BASE_URL, thumbKey),
+      sortOrder: index,
+    });
+  }
+
+  return c.json({ images, imageUrl: images[0].imageUrl, thumbnailUrl: images[0].thumbUrl }, 201);
 });
 
 app.get('/images/*', async (c) => {

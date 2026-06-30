@@ -9,10 +9,12 @@ export function PawnCard({ pawn }: { pawn: Pawn }) {
       className="group overflow-hidden rounded border border-white/10 bg-ash-900 transition hover:border-ember-500/50 hover:shadow-glow"
     >
       <div className="aspect-[4/3] overflow-hidden bg-ash-850">
-        {pawn.imageUrl ? (
+        {pawn.thumbnailUrl ? (
           <img
-            src={pawn.imageUrl}
+            src={pawn.thumbnailUrl}
             alt={pawn.pawnName}
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
           />
         ) : (

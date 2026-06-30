@@ -1,4 +1,4 @@
-import type { AuthUser, PawnRow, UserRow } from './types';
+import type { AuthUser, PawnImage, PawnRow, UserRow } from './types';
 
 export function publicUser(row: UserRow) {
   return {
@@ -12,6 +12,8 @@ export function publicUser(row: UserRow) {
 }
 
 export function publicPawn(row: PawnRow) {
+  const images = parseImages(row.image_urls, row.image_url);
+
   return {
     id: row.id,
     userId: row.user_id,
@@ -30,7 +32,9 @@ export function publicPawn(row: PawnRow) {
     switchFriendId: row.switch_friend_id,
     psnId: row.psn_id,
     xboxGamertag: row.xbox_gamertag,
-    imageUrl: row.image_url,
+    imageUrl: images[0]?.imageUrl ?? row.image_url,
+    thumbnailUrl: row.thumbnail_url ?? images[0]?.thumbUrl ?? row.image_url,
+    images,
     status: row.status,
     activityStars: row.activity_stars,
     lastRefreshedAt: row.last_refreshed_at,
@@ -99,6 +103,25 @@ export async function decayPawnActivity(db: D1Database, pawn: PawnRow) {
 
 export function canManagePawn(user: AuthUser, pawn: PawnRow) {
   return user.role === 'admin' || user.id === pawn.user_id;
+}
+
+function parseImages(value: string, fallbackUrl: string): PawnImage[] {
+  try {
+    const images = JSON.parse(value) as PawnImage[];
+    if (Array.isArray(images) && images.every(isPawnImage)) {
+      return images.sort((a, b) => a.sortOrder - b.sortOrder);
+    }
+  } catch {
+    // Fall back to legacy single-image rows.
+  }
+
+  return fallbackUrl ? [{ imageUrl: fallbackUrl, thumbUrl: fallbackUrl, sortOrder: 0 }] : [];
+}
+
+function isPawnImage(value: unknown): value is PawnImage {
+  if (!value || typeof value !== 'object') return false;
+  const image = value as PawnImage;
+  return typeof image.imageUrl === 'string' && typeof image.thumbUrl === 'string' && Number.isInteger(image.sortOrder);
 }
 
 function parseSkills(value: string) {

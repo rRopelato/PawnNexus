@@ -33,6 +33,12 @@ export type BannedEmail = {
   createdAt: string;
 };
 
+export type PawnImage = {
+  imageUrl: string;
+  thumbUrl: string;
+  sortOrder: number;
+};
+
 export type Pawn = {
   id: string;
   userId: string;
@@ -52,6 +58,8 @@ export type Pawn = {
   psnId: string | null;
   xboxGamertag: string | null;
   imageUrl: string;
+  thumbnailUrl: string;
+  images: PawnImage[];
   status: PawnStatus;
   activityStars: number;
   lastRefreshedAt: string;
