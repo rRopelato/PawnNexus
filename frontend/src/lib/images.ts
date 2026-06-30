@@ -56,19 +56,43 @@ function fitWidth(width: number, height: number, targetWidth: number) {
 }
 
 async function renderWebp(bitmap: ImageBitmap, size: { width: number; height: number }, quality: number, name: string) {
-  const canvas = document.createElement('canvas');
-  canvas.width = size.width;
-  canvas.height = size.height;
+  let blob: Blob | null = null;
 
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('Unable to process image.');
-  context.imageSmoothingEnabled = true;
-  context.imageSmoothingQuality = 'high';
-  context.drawImage(bitmap, 0, 0, size.width, size.height);
+  if ('OffscreenCanvas' in window) {
+    const canvas = new OffscreenCanvas(size.width, size.height);
+    const context = canvas.getContext('2d');
 
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/webp', quality));
+    if (!context) throw new Error('Unable to process image.');
+
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(bitmap, 0, 0, size.width, size.height);
+
+    blob = await canvas.convertToBlob({
+      type: 'image/webp',
+      quality,
+    }).catch(() => null);
+  }
+
+  if (!blob) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size.width;
+    canvas.height = size.height;
+
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Unable to process image.');
+
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(bitmap, 0, 0, size.width, size.height);
+
+    blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/webp', quality);
+    });
+  }
+
   if (!blob || blob.type !== 'image/webp') {
-    throw new Error('This browser could not convert the image to WebP.');
+    throw new Error('This browser could not convert the image to WebP. Please try Chrome, Firefox, or upload from desktop.');
   }
 
   return new File([blob], name, { type: 'image/webp' });
