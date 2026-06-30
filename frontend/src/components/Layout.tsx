@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
-import { Github, Heart, LogOut, Shield, Swords, UserRound } from 'lucide-react';
+import { Github, Heart, LogOut, Menu, Shield, Swords, UserRound, X } from 'lucide-react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from '../types';
 import { clearToken } from '../lib/api';
@@ -12,22 +13,28 @@ type Props = {
 
 export function Layout({ user, onLogout }: Props) {
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   function logout() {
     clearToken();
     onLogout();
+    setMobileMenuOpen(false);
     navigate('/');
+  }
+
+  function closeMobileMenu() {
+    setMobileMenuOpen(false);
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-ash-950 text-zinc-100">
       <header className="sticky top-0 z-20 border-b border-white/10 bg-ash-950/88 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-          <Link to="/" className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded border border-ember-500/40 bg-ash-850 text-ember-500">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4">
+          <Link to="/" className="flex min-w-0 items-center gap-3" onClick={closeMobileMenu}>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded border border-ember-500/40 bg-ash-850 text-ember-500">
               <Swords size={22} />
             </span>
-            <span className="text-lg font-semibold tracking-wide">PawnNexus</span>
+            <span className="truncate text-lg font-semibold tracking-wide">PawnNexus</span>
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
@@ -38,7 +45,7 @@ export function Layout({ user, onLogout }: Props) {
             {user?.role === 'admin' ? <NavItem to="/admin">Admin</NavItem> : null}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {user ? (
               <>
                 <Link
@@ -53,17 +60,50 @@ export function Layout({ user, onLogout }: Props) {
                 </button>
               </>
             ) : (
-              <>
+              <div className="hidden items-center gap-2 sm:flex">
                 <Link className="button-secondary" to="/login">
                   Login
                 </Link>
                 <Link className="button-primary" to="/register">
                   Register
                 </Link>
-              </>
+              </div>
             )}
+
+            <button
+              className="icon-button md:hidden"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileMenuOpen}
+              title={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            >
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
           </div>
         </div>
+
+        {mobileMenuOpen ? (
+          <nav className="border-t border-white/10 px-4 pb-4 md:hidden">
+            <div className="mx-auto grid max-w-7xl gap-2 pt-4">
+              <MobileNavItem to="/" onClick={closeMobileMenu}>Browse</MobileNavItem>
+              {user ? <MobileNavItem to="/my-pawns" onClick={closeMobileMenu}>My Pawns</MobileNavItem> : null}
+              {user ? <MobileNavItem to="/add-pawn" onClick={closeMobileMenu}>Add Pawn</MobileNavItem> : null}
+              <MobileNavItem to="/support" onClick={closeMobileMenu}>Support</MobileNavItem>
+              {user ? <MobileNavItem to="/profile" onClick={closeMobileMenu}>Profile</MobileNavItem> : null}
+              {user?.role === 'admin' ? <MobileNavItem to="/admin" onClick={closeMobileMenu}>Admin</MobileNavItem> : null}
+              {!user ? (
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <Link className="button-secondary justify-center" to="/login" onClick={closeMobileMenu}>
+                    Login
+                  </Link>
+                  <Link className="button-primary justify-center" to="/register" onClick={closeMobileMenu}>
+                    Register
+                  </Link>
+                </div>
+              ) : null}
+            </div>
+          </nav>
+        ) : null}
       </header>
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
@@ -104,6 +144,22 @@ function NavItem({ to, children }: { to: string; children: ReactNode }) {
       className={({ isActive }) =>
         `rounded px-3 py-2 text-sm transition ${
           isActive ? 'bg-ember-500 text-ash-950' : 'text-zinc-300 hover:bg-white/5 hover:text-white'
+        }`
+      }
+    >
+      {children}
+    </NavLink>
+  );
+}
+
+function MobileNavItem({ to, children, onClick }: { to: string; children: ReactNode; onClick: () => void }) {
+  return (
+    <NavLink
+      to={to}
+      onClick={onClick}
+      className={({ isActive }) =>
+        `rounded border px-4 py-3 text-sm transition ${
+          isActive ? 'border-ember-500/60 bg-ember-500 text-ash-950' : 'border-white/10 bg-ash-850 text-zinc-200 hover:border-ember-500/40 hover:text-white'
         }`
       }
     >
