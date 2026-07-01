@@ -13,6 +13,7 @@ export function publicUser(row: UserRow) {
 
 export function publicPawn(row: PawnRow) {
   const images = parseImages(row.image_urls, row.image_url);
+  const weaponSkills = parseSkills(row.skills).slice(0, 4);
 
   return {
     id: row.id,
@@ -21,17 +22,33 @@ export function publicPawn(row: PawnRow) {
     arisenName: row.arisen_name,
     gender: row.gender,
     race: row.race,
-    platform: row.platform,
+    platform: normalizePlatform(row.platform),
     vocation: row.vocation,
     level: row.level,
     inclination: row.inclination,
-    skills: parseSkills(row.skills),
+    skills: weaponSkills,
+    weaponSkills,
     description: row.description,
     pawnId: row.pawn_id,
     steamUrl: row.steam_url,
     switchFriendId: row.switch_friend_id,
     psnId: row.psn_id,
     xboxGamertag: row.xbox_gamertag,
+    weapon1: row.weapon1,
+    weapon2: row.weapon2,
+    head: row.head,
+    body: row.body,
+    legs: row.legs,
+    cloak: row.cloak,
+    ring1: row.ring1,
+    ring2: row.ring2,
+    augment1: row.augment1,
+    augment2: row.augment2,
+    augment3: row.augment3,
+    augment4: row.augment4,
+    augment5: row.augment5,
+    augment6: row.augment6,
+    specialization: row.specialization,
     imageUrl: images[0]?.imageUrl ?? row.image_url,
     thumbnailUrl: row.thumbnail_url ?? images[0]?.thumbUrl ?? row.image_url,
     images,
@@ -103,6 +120,10 @@ export async function decayPawnActivity(db: D1Database, pawn: PawnRow) {
 
 export function canManagePawn(user: AuthUser, pawn: PawnRow) {
   return user.role === 'admin' || user.id === pawn.user_id;
+}
+
+export function normalizePlatform(platform: string) {
+  return platform === 'Nintendo Switch' ? 'Nintendo Switch 2' : platform;
 }
 
 function parseImages(value: string, fallbackUrl: string): PawnImage[] {

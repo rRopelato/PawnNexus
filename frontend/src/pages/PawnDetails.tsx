@@ -56,14 +56,38 @@ export function PawnDetails({ user }: { user: User | null }) {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-white">Skills</h2>
+          <h2 className="text-xl font-semibold text-white">Weapon Skills</h2>
           <div className="flex flex-wrap gap-2">
-            {pawn.skills.map((skill) => (
+            {(pawn.weaponSkills ?? pawn.skills).map((skill) => (
               <span key={skill} className="tag">
                 {skill}
               </span>
             ))}
           </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2">
+          <DetailGroup title="Weapons" items={[
+            ['Weapon 1', pawn.weapon1],
+            ...(pawn.vocation === 'Fighter' ? [['Weapon 2', pawn.weapon2] as [string, string | null]] : []),
+          ]} />
+          <DetailGroup title="Armor" items={[
+            ['Head', pawn.head],
+            ['Body', pawn.body],
+            ['Legs', pawn.legs],
+            ['Cloak', pawn.cloak],
+            ['Ring 1', pawn.ring1],
+            ['Ring 2', pawn.ring2],
+          ]} />
+          <DetailGroup title="Augments" items={[
+            ['Augment 1', pawn.augment1],
+            ['Augment 2', pawn.augment2],
+            ['Augment 3', pawn.augment3],
+            ['Augment 4', pawn.augment4],
+            ['Augment 5', pawn.augment5],
+            ['Augment 6', pawn.augment6],
+          ]} />
+          <DetailGroup title="Specialization" items={[[ 'Specialization', pawn.specialization ]]} />
         </section>
       </div>
 
@@ -94,7 +118,7 @@ export function PawnDetails({ user }: { user: User | null }) {
           <Info label="Inclination" value={pawn.inclination} />
           <Info label="Pawn ID" value={pawn.pawnId} />
           <Info label="Owner" value={pawn.ownerUsername} />
-          {platformContact ? <Info label={platformContact.label} value={platformContact.value} href={platformContact.href} /> : null}
+          <Info label={platformContact.label} value={platformContact.value} href={platformContact.href} />
         </dl>
 
         <div className="space-y-2 border-t border-white/10 pt-4 text-sm text-zinc-400">
@@ -127,6 +151,7 @@ function ImageCarousel({ images, pawnName }: { images: PawnImage[]; pawnName: st
   const orderedImages = useMemo(() => [...images].sort((a, b) => a.sortOrder - b.sortOrder), [images]);
   const [index, setIndex] = useState(0);
   const [loaded, setLoaded] = useState(() => new Set([0]));
+  const [timerReset, setTimerReset] = useState(0);
 
   useEffect(() => {
     if (orderedImages.length <= 1) return;
@@ -134,7 +159,7 @@ function ImageCarousel({ images, pawnName }: { images: PawnImage[]; pawnName: st
       setIndex((current) => (current + 1) % orderedImages.length);
     }, 8000);
     return () => window.clearInterval(timer);
-  }, [orderedImages.length]);
+  }, [orderedImages.length, timerReset]);
 
   useEffect(() => {
     setLoaded((current) => new Set(current).add(index));
@@ -144,8 +169,13 @@ function ImageCarousel({ images, pawnName }: { images: PawnImage[]; pawnName: st
     return <div className="grid aspect-video place-items-center rounded border border-white/10 bg-ash-900 text-zinc-500">No screenshot</div>;
   }
 
+  function selectImage(nextIndex: number) {
+    setIndex(nextIndex);
+    setTimerReset((value) => value + 1);
+  }
+
   function move(direction: number) {
-    setIndex((current) => (current + direction + orderedImages.length) % orderedImages.length);
+    selectImage((index + direction + orderedImages.length) % orderedImages.length);
   }
 
   return (
@@ -180,13 +210,26 @@ function ImageCarousel({ images, pawnName }: { images: PawnImage[]; pawnName: st
             <button
               key={image.thumbUrl}
               className={`h-2.5 w-2.5 rounded-full ${imageIndex === index ? 'bg-ember-500' : 'bg-white/20'}`}
-              onClick={() => setIndex(imageIndex)}
+              onClick={() => selectImage(imageIndex)}
               aria-label={`Show image ${imageIndex + 1}`}
               title={`Show image ${imageIndex + 1}`}
             />
           ))}
         </div>
       ) : null}
+    </section>
+  );
+}
+
+function DetailGroup({ title, items }: { title: string; items: Array<[string, string | null]> }) {
+  return (
+    <section className="rounded border border-white/10 bg-ash-900 p-4">
+      <h2 className="text-lg font-semibold text-white">{title}</h2>
+      <dl className="mt-3 grid gap-3 text-sm">
+        {items.map(([label, value]) => (
+          <Info key={label} label={label} value={value?.trim() || 'REDACTED'} />
+        ))}
+      </dl>
     </section>
   );
 }
@@ -209,9 +252,9 @@ function Info({ label, value, href }: { label: string; value: string; href?: str
 }
 
 function getPlatformContact(pawn: Pawn) {
-  if (pawn.platform === 'Steam' && pawn.steamUrl) return { label: 'Steam', value: pawn.steamUrl, href: pawn.steamUrl };
-  if (pawn.platform === 'Nintendo Switch' && pawn.switchFriendId) return { label: 'Friend ID', value: pawn.switchFriendId };
-  if (pawn.platform === 'PlayStation' && pawn.psnId) return { label: 'PSN ID', value: pawn.psnId };
-  if (pawn.platform === 'Xbox' && pawn.xboxGamertag) return { label: 'Gamertag', value: pawn.xboxGamertag };
-  return null;
+  if (pawn.platform === 'Steam') return { label: 'Steam', value: pawn.steamUrl || 'REDACTED', href: pawn.steamUrl || undefined };
+  if (pawn.platform === 'Nintendo Switch 2') return { label: 'Friend ID', value: pawn.switchFriendId || 'REDACTED' };
+  if (pawn.platform === 'PlayStation') return { label: 'PSN ID', value: pawn.psnId || 'REDACTED' };
+  if (pawn.platform === 'Xbox') return { label: 'Gamertag', value: pawn.xboxGamertag || 'REDACTED' };
+  return { label: 'Platform ID', value: 'REDACTED' };
 }

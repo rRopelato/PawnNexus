@@ -5,7 +5,7 @@ export type Env = {
   PUBLIC_IMAGE_BASE_URL: string;
 };
 
-export type Role = 'user' | 'admin';
+export type Role = 'user' | 'moderator' | 'admin';
 export type UserStatus = 'active' | 'banned';
 
 export type AuthUser = {
@@ -60,6 +60,21 @@ export type PawnRow = {
   switch_friend_id: string | null;
   psn_id: string | null;
   xbox_gamertag: string | null;
+  weapon1: string | null;
+  weapon2: string | null;
+  head: string | null;
+  body: string | null;
+  legs: string | null;
+  cloak: string | null;
+  ring1: string | null;
+  ring2: string | null;
+  augment1: string | null;
+  augment2: string | null;
+  augment3: string | null;
+  augment4: string | null;
+  augment5: string | null;
+  augment6: string | null;
+  specialization: string | null;
   image_url: string;
   image_urls: string;
   thumbnail_url: string | null;

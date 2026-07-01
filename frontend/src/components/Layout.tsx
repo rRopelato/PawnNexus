@@ -42,7 +42,7 @@ export function Layout({ user, onLogout }: Props) {
             {user ? <NavItem to="/my-pawns">My Pawns</NavItem> : null}
             {user ? <NavItem to="/add-pawn">Add Pawn</NavItem> : null}
             <NavItem to="/support">Support</NavItem>
-            {user?.role === 'admin' ? <NavItem to="/admin">Admin</NavItem> : null}
+            {user && (user.role === 'admin' || user.role === 'moderator') ? <NavItem to="/admin">Admin</NavItem> : null}
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
@@ -52,7 +52,7 @@ export function Layout({ user, onLogout }: Props) {
                   to="/profile"
                   className="hidden items-center gap-2 rounded border border-white/10 px-3 py-2 text-sm text-zinc-300 transition hover:border-ember-500/40 hover:text-white sm:flex"
                 >
-                  {user.role === 'admin' ? <Shield size={16} /> : <UserRound size={16} />}
+                  {user.role === 'admin' || user.role === 'moderator' ? <Shield size={16} /> : <UserRound size={16} />}
                   {user.username}
                 </Link>
                 <button className="icon-button" onClick={logout} aria-label="Log out" title="Log out">
@@ -90,7 +90,7 @@ export function Layout({ user, onLogout }: Props) {
               {user ? <MobileNavItem to="/add-pawn" onClick={closeMobileMenu}>Add Pawn</MobileNavItem> : null}
               <MobileNavItem to="/support" onClick={closeMobileMenu}>Support</MobileNavItem>
               {user ? <MobileNavItem to="/profile" onClick={closeMobileMenu}>Profile</MobileNavItem> : null}
-              {user?.role === 'admin' ? <MobileNavItem to="/admin" onClick={closeMobileMenu}>Admin</MobileNavItem> : null}
+              {user && (user.role === 'admin' || user.role === 'moderator') ? <MobileNavItem to="/admin" onClick={closeMobileMenu}>Admin</MobileNavItem> : null}
               {!user ? (
                 <div className="grid grid-cols-2 gap-2 pt-2">
                   <Link className="button-secondary justify-center" to="/login" onClick={closeMobileMenu}>

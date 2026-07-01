@@ -14,7 +14,7 @@ import {
   publicPawn,
   publicUser,
 } from './db';
-import { requireAdmin, requireAuth } from './middleware';
+import { requireAdmin, requireAuth, requireModerator } from './middleware';
 import type { BannedEmailRow, Env, PawnRow, UserRow, Variables } from './types';
 import {
   requireString,
@@ -125,18 +125,35 @@ app.get('/pawns', async (c) => {
   const minLevel = Number(c.req.query('minLevel') ?? 0);
   const maxLevel = Number(c.req.query('maxLevel') ?? 999);
   const search = c.req.query('search')?.trim();
+  const specialization = c.req.query('specialization')?.trim();
+  const inclination = c.req.query('inclination')?.trim();
 
   const conditions = ['pawns.status = ?'];
   const values: (string | number)[] = ['approved'];
 
   if (platform) {
-    conditions.push('pawns.platform = ?');
-    values.push(platform);
+    if (platform === 'Nintendo Switch 2') {
+      conditions.push('(pawns.platform = ? OR pawns.platform = ?)');
+      values.push('Nintendo Switch 2', 'Nintendo Switch');
+    } else {
+      conditions.push('pawns.platform = ?');
+      values.push(platform);
+    }
   }
 
   if (vocation) {
     conditions.push('pawns.vocation = ?');
     values.push(vocation);
+  }
+
+  if (specialization) {
+    conditions.push('pawns.specialization = ?');
+    values.push(specialization);
+  }
+
+  if (inclination) {
+    conditions.push('pawns.inclination = ?');
+    values.push(inclination);
   }
 
   if (Number.isFinite(minLevel) && minLevel > 0) {
@@ -195,8 +212,10 @@ app.post('/pawns', requireAuth, async (c) => {
     `INSERT INTO pawns (
       id, user_id, pawn_name, arisen_name, gender, race, platform, vocation, level, inclination,
       skills, description, pawn_id, steam_url, switch_friend_id, psn_id, xbox_gamertag,
+      weapon1, weapon2, head, body, legs, cloak, ring1, ring2,
+      augment1, augment2, augment3, augment4, augment5, augment6, specialization,
       image_url, image_urls, thumbnail_url, status, activity_stars, last_refreshed_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
   )
     .bind(
       id,
@@ -216,6 +235,21 @@ app.post('/pawns', requireAuth, async (c) => {
       payload.switchFriendId,
       payload.psnId,
       payload.xboxGamertag,
+      payload.weapon1,
+      payload.weapon2,
+      payload.head,
+      payload.body,
+      payload.legs,
+      payload.cloak,
+      payload.ring1,
+      payload.ring2,
+      payload.augment1,
+      payload.augment2,
+      payload.augment3,
+      payload.augment4,
+      payload.augment5,
+      payload.augment6,
+      payload.specialization,
       payload.imageUrl,
       JSON.stringify(payload.images),
       payload.thumbnailUrl,
@@ -243,8 +277,10 @@ app.put('/pawns/:id', requireAuth, async (c) => {
     `UPDATE pawns
      SET pawn_name = ?, arisen_name = ?, gender = ?, race = ?, platform = ?, vocation = ?, level = ?,
          inclination = ?, skills = ?, description = ?, pawn_id = ?, steam_url = ?,
-         switch_friend_id = ?, psn_id = ?, xbox_gamertag = ?, image_url = ?, image_urls = ?, thumbnail_url = ?, status = ?,
-         updated_at = datetime('now')
+         switch_friend_id = ?, psn_id = ?, xbox_gamertag = ?, weapon1 = ?, weapon2 = ?,
+         head = ?, body = ?, legs = ?, cloak = ?, ring1 = ?, ring2 = ?,
+         augment1 = ?, augment2 = ?, augment3 = ?, augment4 = ?, augment5 = ?, augment6 = ?, specialization = ?,
+         image_url = ?, image_urls = ?, thumbnail_url = ?, status = ?, updated_at = datetime('now')
      WHERE id = ?`,
   )
     .bind(
@@ -263,6 +299,21 @@ app.put('/pawns/:id', requireAuth, async (c) => {
       payload.switchFriendId,
       payload.psnId,
       payload.xboxGamertag,
+      payload.weapon1,
+      payload.weapon2,
+      payload.head,
+      payload.body,
+      payload.legs,
+      payload.cloak,
+      payload.ring1,
+      payload.ring2,
+      payload.augment1,
+      payload.augment2,
+      payload.augment3,
+      payload.augment4,
+      payload.augment5,
+      payload.augment6,
+      payload.specialization,
       payload.imageUrl,
       JSON.stringify(payload.images),
       payload.thumbnailUrl,
@@ -297,7 +348,7 @@ app.delete('/pawns/:id', requireAuth, async (c) => {
   const user = c.get('user');
   const pawn = await getPawnById(c.env.DB, c.req.param('id'));
   if (!pawn) throw new HTTPException(404, { message: 'Pawn not found' });
-  if (!canManagePawn(user, pawn)) throw new HTTPException(403, { message: 'Not allowed' });
+  if (!canManagePawn(user, pawn) && user.role !== 'moderator') throw new HTTPException(403, { message: 'Not allowed' });
 
   await c.env.DB.prepare('DELETE FROM pawns WHERE id = ?').bind(pawn.id).run();
   return c.json({ ok: true });
@@ -386,14 +437,60 @@ app.get('/admin/stats', requireAuth, requireAdmin, async (c) => {
 });
 
 app.get('/admin/users', requireAuth, requireAdmin, async (c) => {
+  const search = c.req.query('search')?.trim();
+  const page = Math.max(1, Number(c.req.query('page') ?? 1));
+  const pageSize = Math.min(50, Math.max(5, Number(c.req.query('pageSize') ?? 20)));
+  const offset = (page - 1) * pageSize;
+  const conditions: string[] = [];
+  const values: (string | number)[] = [];
+
+  if (search) {
+    conditions.push('(username LIKE ? OR email LIKE ?)');
+    values.push(`%${search}%`, `%${search}%`);
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const count = await c.env.DB.prepare(`SELECT COUNT(*) AS count FROM users ${where}`).bind(...values).first<{ count: number }>();
   const result = await c.env.DB.prepare(
     `SELECT id, email, username, role, status, created_at
      FROM users
+     ${where}
      ORDER BY created_at DESC
-     LIMIT 200`,
-  ).all<UserRow>();
+     LIMIT ? OFFSET ?`,
+  )
+    .bind(...values, pageSize, offset)
+    .all<UserRow>();
 
-  return c.json({ users: result.results.map(publicUser) });
+  return c.json({
+    users: result.results.map(publicUser),
+    page,
+    pageSize,
+    total: count?.count ?? 0,
+  });
+});
+
+app.post('/admin/users/:id/role', requireAuth, requireAdmin, async (c) => {
+  const current = c.get('user');
+  const id = c.req.param('id');
+  const body = await c.req.json<Record<string, unknown>>();
+  const role = requireString(body.role, 'role', 20);
+
+  if (role !== 'user' && role !== 'moderator' && role !== 'admin') {
+    throw new HTTPException(400, { message: 'role is invalid' });
+  }
+
+  if (current.id === id && role !== 'admin') {
+    throw new HTTPException(400, { message: 'Admins cannot demote themselves' });
+  }
+
+  const target = await getUserById(c.env.DB, id);
+  if (!target) throw new HTTPException(404, { message: 'User not found' });
+
+  await c.env.DB.prepare('UPDATE users SET role = ? WHERE id = ?').bind(role, id).run();
+  const updated = await getUserById(c.env.DB, id);
+  if (!updated) throw new HTTPException(500, { message: 'Unable to update user role' });
+
+  return c.json({ user: publicUser(updated) });
 });
 
 app.delete('/admin/users/:id', requireAuth, requireAdmin, async (c) => {
@@ -437,7 +534,7 @@ app.post('/admin/unban-email', requireAuth, requireAdmin, async (c) => {
   return c.json({ ok: true });
 });
 
-app.get('/admin/pending', requireAuth, requireAdmin, async (c) => {
+app.get('/admin/pending', requireAuth, requireModerator, async (c) => {
   const result = await c.env.DB.prepare(
     `SELECT pawns.*, users.username AS owner_username
      FROM pawns
@@ -452,12 +549,12 @@ app.get('/admin/pending', requireAuth, requireAdmin, async (c) => {
   return c.json({ pawns: pawns.map(publicPawn) });
 });
 
-app.post('/admin/approve/:id', requireAuth, requireAdmin, async (c) => {
+app.post('/admin/approve/:id', requireAuth, requireModerator, async (c) => {
   const pawn = await updatePawnStatus(c.env.DB, c.req.param('id'), 'approved');
   return c.json({ pawn: publicPawn(pawn) });
 });
 
-app.post('/admin/reject/:id', requireAuth, requireAdmin, async (c) => {
+app.post('/admin/reject/:id', requireAuth, requireModerator, async (c) => {
   const pawn = await updatePawnStatus(c.env.DB, c.req.param('id'), 'rejected');
   return c.json({ pawn: publicPawn(pawn) });
 });

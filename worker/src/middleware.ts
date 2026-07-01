@@ -40,3 +40,12 @@ export const requireAdmin = createMiddleware<{ Bindings: Env; Variables: Variabl
 
   await next();
 });
+
+export const requireModerator = createMiddleware<{ Bindings: Env; Variables: Variables }>(async (c, next) => {
+  const user = c.get('user');
+  if (user.role !== 'admin' && user.role !== 'moderator') {
+    throw new HTTPException(403, { message: 'Moderator access required' });
+  }
+
+  await next();
+});

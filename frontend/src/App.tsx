@@ -55,7 +55,7 @@ export function App() {
         <Route path="my-pawns" element={user ? <MyPawns /> : <Navigate to="/login" replace />} />
         <Route
           path="admin"
-          element={user?.role === 'admin' ? <Admin /> : <Navigate to="/" replace />}
+          element={user && (user.role === 'admin' || user.role === 'moderator') ? <Admin currentUser={user} /> : <Navigate to="/" replace />}
         />
         <Route path="*" element={<NotFound />} />
       </Route>

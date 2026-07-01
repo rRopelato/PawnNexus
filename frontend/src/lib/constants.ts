@@ -1,6 +1,6 @@
 import type { PawnGender, PawnRace, Platform, Vocation } from '../types';
 
-export const platforms: Platform[] = ['Steam', 'Nintendo Switch', 'PlayStation', 'Xbox'];
+export const platforms: Platform[] = ['Steam', 'Nintendo Switch 2', 'PlayStation', 'Xbox'];
 
 export const pawnGenders: PawnGender[] = ['Female', 'Male', 'Unspecified'];
 export const pawnRaces: PawnRace[] = ['Human', 'Beastren'];
@@ -19,4 +19,14 @@ export const inclinations = [
   'Calm',
   'Straightforward',
   'Simple',
+];
+
+export const specializations = [
+  'Aphonite',
+  'Chirurgeon',
+  'Forager',
+  'Hawker',
+  'Logistician',
+  'Woodland Wordsmith',
+  'Guardian',
 ];

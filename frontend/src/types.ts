@@ -1,4 +1,4 @@
-export type Platform = 'Steam' | 'Nintendo Switch' | 'PlayStation' | 'Xbox';
+export type Platform = 'Steam' | 'Nintendo Switch 2' | 'PlayStation' | 'Xbox';
 export type PawnGender = 'Female' | 'Male' | 'Unspecified';
 export type PawnRace = 'Human' | 'Beastren';
 export type Vocation =
@@ -14,7 +14,7 @@ export type User = {
   id: string;
   username: string;
   email: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'moderator' | 'admin';
   status: 'active' | 'banned';
   createdAt: string;
 };
@@ -51,12 +51,28 @@ export type Pawn = {
   level: number;
   inclination: string;
   skills: string[];
+  weaponSkills: string[];
   description: string;
   pawnId: string;
   steamUrl: string | null;
   switchFriendId: string | null;
   psnId: string | null;
   xboxGamertag: string | null;
+  weapon1: string | null;
+  weapon2: string | null;
+  head: string | null;
+  body: string | null;
+  legs: string | null;
+  cloak: string | null;
+  ring1: string | null;
+  ring2: string | null;
+  augment1: string | null;
+  augment2: string | null;
+  augment3: string | null;
+  augment4: string | null;
+  augment5: string | null;
+  augment6: string | null;
+  specialization: string | null;
   imageUrl: string;
   thumbnailUrl: string;
   images: PawnImage[];
@@ -74,4 +90,13 @@ export type PawnFilters = {
   minLevel?: string;
   maxLevel?: string;
   search?: string;
+  specialization?: string;
+  inclination?: string;
+};
+
+export type AdminUsersResult = {
+  users: User[];
+  page: number;
+  pageSize: number;
+  total: number;
 };

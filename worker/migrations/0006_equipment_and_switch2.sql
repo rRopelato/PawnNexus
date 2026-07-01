@@ -1,0 +1,17 @@
+ALTER TABLE pawns ADD COLUMN weapon1 TEXT;
+ALTER TABLE pawns ADD COLUMN weapon2 TEXT;
+ALTER TABLE pawns ADD COLUMN head TEXT;
+ALTER TABLE pawns ADD COLUMN body TEXT;
+ALTER TABLE pawns ADD COLUMN legs TEXT;
+ALTER TABLE pawns ADD COLUMN cloak TEXT;
+ALTER TABLE pawns ADD COLUMN ring1 TEXT;
+ALTER TABLE pawns ADD COLUMN ring2 TEXT;
+ALTER TABLE pawns ADD COLUMN augment1 TEXT;
+ALTER TABLE pawns ADD COLUMN augment2 TEXT;
+ALTER TABLE pawns ADD COLUMN augment3 TEXT;
+ALTER TABLE pawns ADD COLUMN augment4 TEXT;
+ALTER TABLE pawns ADD COLUMN augment5 TEXT;
+ALTER TABLE pawns ADD COLUMN augment6 TEXT;
+ALTER TABLE pawns ADD COLUMN specialization TEXT;
+
+UPDATE pawns SET platform = 'Nintendo Switch 2' WHERE platform = 'Nintendo Switch';

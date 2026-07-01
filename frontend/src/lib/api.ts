@@ -1,4 +1,4 @@
-import type { AdminStats, BannedEmail, Pawn, PawnFilters, PawnImage, User } from '../types';
+import type { AdminStats, AdminUsersResult, BannedEmail, Pawn, PawnFilters, PawnImage, User } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
 const TOKEN_KEY = 'pawnnexus.token';
@@ -116,8 +116,20 @@ export const api = {
   async adminStats() {
     return request<{ stats: AdminStats }>('/admin/stats', { auth: true });
   },
-  async adminUsers() {
-    return request<{ users: User[] }>('/admin/users', { auth: true });
+  async adminUsers(options: { page?: number; pageSize?: number; search?: string } = {}) {
+    const search = new URLSearchParams();
+    if (options.page) search.set('page', String(options.page));
+    if (options.pageSize) search.set('pageSize', String(options.pageSize));
+    if (options.search) search.set('search', options.search);
+    const suffix = search.toString() ? `?${search.toString()}` : '';
+    return request<AdminUsersResult>(`/admin/users${suffix}`, { auth: true });
+  },
+  async updateUserRole(id: string, role: User['role']) {
+    return request<{ user: User }>(`/admin/users/${id}/role`, {
+      method: 'POST',
+      body: JSON.stringify({ role }),
+      auth: true,
+    });
   },
   async deleteUser(id: string) {
     return request<{ ok: true }>(`/admin/users/${id}`, {
