@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
-import { Github, Heart, LogOut, Menu, Shield, Swords, UserRound, X } from 'lucide-react';
+import { AlertTriangle, Github, Heart, LogOut, Menu, Shield, Swords, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from '../types';
@@ -105,6 +105,18 @@ export function Layout({ user, onLogout }: Props) {
           </nav>
         ) : null}
       </header>
+
+      <section className="border-b border-ember-500/20 bg-ember-500/10">
+        <div className="mx-auto flex max-w-7xl gap-3 px-4 py-4 text-sm text-zinc-200">
+          <AlertTriangle className="mt-0.5 shrink-0 text-ember-500" size={18} />
+          <div className="space-y-1">
+            <p className="font-semibold text-white">Sorry - recent database work cleared the existing Pawn listings.</p>
+            <p className="text-zinc-300">
+              PawnNexus is still in testing, so issues like this can happen while the system is being updated. The developer will keep a separate database backup from now on to prevent this from happening again.
+            </p>
+          </div>
+        </div>
+      </section>
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
         <Outlet />
