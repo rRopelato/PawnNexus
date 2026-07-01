@@ -66,7 +66,7 @@ export function PawnDetails({ user }: { user: User | null }) {
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2">
+        <section className="space-y-5">
           <DetailGroup title="Weapons" items={[
             ['Weapon 1', pawn.weapon1],
             ...(pawn.vocation === 'Fighter' ? [['Weapon 2', pawn.weapon2] as [string, string | null]] : []),
@@ -223,13 +223,18 @@ function ImageCarousel({ images, pawnName }: { images: PawnImage[]; pawnName: st
 
 function DetailGroup({ title, items }: { title: string; items: Array<[string, string | null]> }) {
   return (
-    <section className="rounded border border-white/10 bg-ash-900 p-4">
-      <h2 className="text-lg font-semibold text-white">{title}</h2>
-      <dl className="mt-3 grid gap-3 text-sm">
-        {items.map(([label, value]) => (
-          <Info key={label} label={label} value={value?.trim() || 'REDACTED'} />
-        ))}
-      </dl>
+    <section className="space-y-3">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="flex flex-wrap gap-2">
+        {items.map(([label, value]) => {
+          const filled = value?.trim();
+          return (
+            <span key={label} className={filled ? 'tag' : 'tag border-white/5 bg-white/5 text-zinc-500'}>
+              <span className="text-zinc-400">{label}:</span> {filled || 'Not filled'}
+            </span>
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -252,9 +257,9 @@ function Info({ label, value, href }: { label: string; value: string; href?: str
 }
 
 function getPlatformContact(pawn: Pawn) {
-  if (pawn.platform === 'Steam') return { label: 'Steam', value: pawn.steamUrl || 'REDACTED', href: pawn.steamUrl || undefined };
-  if (pawn.platform === 'Nintendo Switch 2') return { label: 'Friend ID', value: pawn.switchFriendId || 'REDACTED' };
-  if (pawn.platform === 'PlayStation') return { label: 'PSN ID', value: pawn.psnId || 'REDACTED' };
-  if (pawn.platform === 'Xbox') return { label: 'Gamertag', value: pawn.xboxGamertag || 'REDACTED' };
-  return { label: 'Platform ID', value: 'REDACTED' };
+  if (pawn.platform === 'Steam') return { label: 'Steam', value: pawn.steamUrl || 'Not filled', href: pawn.steamUrl || undefined };
+  if (pawn.platform === 'Nintendo Switch 2') return { label: 'Friend ID', value: pawn.switchFriendId || 'Not filled' };
+  if (pawn.platform === 'PlayStation') return { label: 'PSN ID', value: pawn.psnId || 'Not filled' };
+  if (pawn.platform === 'Xbox') return { label: 'Gamertag', value: pawn.xboxGamertag || 'Not filled' };
+  return { label: 'Platform ID', value: 'Not filled' };
 }
