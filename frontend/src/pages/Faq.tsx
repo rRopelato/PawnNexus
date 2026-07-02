@@ -189,8 +189,22 @@ export function Faq() {
           <div>
             <h2 className="text-lg font-semibold text-white">Contact</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
-You can contact me through GitHub, LinkedIn, or Discord. For portfolio and other projects, visit ropelato.dev.br.
+              You can contact me through GitHub, LinkedIn, or Discord. For portfolio and other projects, visit ropelato.dev.br.
             </p>
+            <div className="mt-4 flex flex-wrap gap-3 text-sm">
+              <a className="inline-flex items-center gap-2 text-ember-500 hover:text-ember-600" href={creator.githubUrl} target="_blank" rel="noreferrer">
+                <Github size={16} /> GitHub
+              </a>
+              <a className="inline-flex items-center gap-2 text-ember-500 hover:text-ember-600" href={creator.linkedInUrl} target="_blank" rel="noreferrer">
+                <Linkedin size={16} /> LinkedIn
+              </a>
+              <a className="inline-flex items-center gap-2 text-ember-500 hover:text-ember-600" href={creator.portfolioUrl} target="_blank" rel="noreferrer">
+                <Globe size={16} /> Portfolio
+              </a>
+              <span className="inline-flex items-center gap-2 text-zinc-300">
+                <MessageCircle size={16} /> Discord: {creator.discordUsername}
+              </span>
+            </div>
           </div>
         </div>
       </section>
