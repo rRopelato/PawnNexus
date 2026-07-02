@@ -1,11 +1,11 @@
-name = "pawnnexus-api"
+name = "pawnnexus-api-dev"
 main = "src/index.ts"
 compatibility_date = "2026-06-29"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "pawnnexus"
-database_id = "7c6ee7c6-5d4c-4753-9d4f-8ef65be4fdd3"
+database_name = "pawnnexus-dev"
+database_id = "0b9db12e-4af8-452e-aef9-ce5e55c0acd3"
 migrations_dir = "migrations"
 
 [[r2_buckets]]
@@ -13,6 +13,6 @@ binding = "IMAGES"
 bucket_name = "pawnnexus-images"
 
 [vars]
-APP_BASE_URL = "https://pawnnexus.com"
+APP_BASE_URL = "https://pawnnexus-dev.pages.dev"
 EMAIL_FROM = "PawnNexus <noreply@pawnnexus.com>"
 PUBLIC_IMAGE_BASE_URL = "https://images.example.com"

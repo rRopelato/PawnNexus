@@ -16,6 +16,8 @@ export type User = {
   email: string;
   role: 'user' | 'moderator' | 'admin';
   status: 'active' | 'banned';
+  emailVerifiedAt: string | null;
+  pendingEmail: string | null;
   createdAt: string;
 };
 

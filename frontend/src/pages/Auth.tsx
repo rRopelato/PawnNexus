@@ -51,7 +51,7 @@ export function Auth({ mode, onAuth }: Props) {
         : await api.register(username.trim(), email.trim().toLowerCase(), password);
       setToken(result.token);
       onAuth(result.user);
-      navigate('/');
+      navigate(result.user.emailVerifiedAt ? '/' : '/verify-required');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
@@ -73,7 +73,7 @@ export function Auth({ mode, onAuth }: Props) {
       <div>
         <h1 className="text-3xl font-semibold text-white">{mode === 'login' ? 'Login' : 'Create account'}</h1>
         <p className="mt-2 text-zinc-400">
-          {mode === 'login' ? 'Use your username or email to manage your Pawns.' : 'Choose a public username and keep your email private.'}
+          {mode === 'login' ? 'Use your username or email to manage your Pawns.' : 'Choose a public username and verify your email before adding Pawns.'}
         </p>
       </div>
 
@@ -154,9 +154,17 @@ export function Auth({ mode, onAuth }: Props) {
           {fieldErrors.password ? <FieldError id="password-error" message={fieldErrors.password} /> : null}
         </label>
 
-        <button className="button-primary" disabled={busy}>
-          {busy ? 'Working...' : mode === 'login' ? 'Login' : 'Register'}
-        </button>
+        <div className="flex flex-wrap items-center gap-4">
+          <button className="button-primary" disabled={busy}>
+            {busy ? 'Working...' : mode === 'login' ? 'Login' : 'Register'}
+          </button>
+
+          {mode === 'login' ? (
+            <Link className="text-sm text-ember-500 hover:text-ember-600" to="/forgot-password">
+              Forgot your password?
+            </Link>
+          ) : null}
+        </div>
       </form>
 
       <p className="text-sm text-zinc-400">

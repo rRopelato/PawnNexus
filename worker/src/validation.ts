@@ -11,6 +11,7 @@ const maxPawnImages = 5;
 const maxUploadBytes = 5 * 1024 * 1024;
 const allowedPawnImageUrlPrefixes = [
   'https://pawnnexus-api.r-ropelato.workers.dev/images/',
+  'https://pawnnexus-api-dev.r-ropelato.workers.dev/images/',
   'https://assets.pawnnexus.com/',
 ];
 

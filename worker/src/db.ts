@@ -7,6 +7,8 @@ export function publicUser(row: UserRow) {
     email: row.email,
     role: row.role,
     status: row.status,
+    emailVerifiedAt: row.email_verified_at ?? null,
+    pendingEmail: row.pending_email ?? null,
     createdAt: row.created_at,
   };
 }
@@ -67,6 +69,13 @@ export async function getUserById(db: D1Database, id: string) {
 
 export async function getUserByEmail(db: D1Database, email: string) {
   return db.prepare('SELECT * FROM users WHERE lower(email) = lower(?)').bind(email).first<UserRow>();
+}
+
+export async function getUserByEmailOrPendingEmail(db: D1Database, email: string) {
+  return db
+    .prepare('SELECT * FROM users WHERE lower(email) = lower(?) OR lower(pending_email) = lower(?)')
+    .bind(email, email)
+    .first<UserRow>();
 }
 
 export async function getUserByUsername(db: D1Database, username: string) {

@@ -3,6 +3,9 @@ export type Env = {
   IMAGES: R2Bucket;
   JWT_SECRET: string;
   PUBLIC_IMAGE_BASE_URL: string;
+  RESEND_API_KEY: string;
+  EMAIL_FROM: string;
+  APP_BASE_URL: string;
 };
 
 export type Role = 'user' | 'moderator' | 'admin';
@@ -14,6 +17,8 @@ export type AuthUser = {
   username: string;
   role: Role;
   status: UserStatus;
+  emailVerifiedAt: string | null;
+  pendingEmail: string | null;
 };
 
 export type Variables = {
@@ -27,6 +32,8 @@ export type UserRow = {
   password_hash: string;
   role: Role;
   status: UserStatus;
+  email_verified_at: string | null;
+  pending_email: string | null;
   created_at: string;
 };
 

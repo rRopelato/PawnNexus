@@ -57,6 +57,37 @@ export const api = {
   async me() {
     return request<{ user: User }>('/me', { auth: true });
   },
+  async verifyEmail(token: string) {
+    return request<{ user: User }>('/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  },
+  async resendVerification() {
+    return request<{ ok: true; user: User }>('/resend-verification', {
+      method: 'POST',
+      auth: true,
+    });
+  },
+  async changeEmail(email: string) {
+    return request<{ user: User }>('/change-email', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+      auth: true,
+    });
+  },
+  async forgotPassword(email: string) {
+    return request<{ ok: true }>('/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+  async resetPassword(token: string, password: string) {
+    return request<{ ok: true }>('/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    });
+  },
   async pawns(filters: PawnFilters = {}) {
     const search = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {

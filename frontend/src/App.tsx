@@ -4,6 +4,7 @@ import { Layout } from './components/Layout';
 import { api, getToken } from './lib/api';
 import { Admin } from './pages/Admin';
 import { Auth } from './pages/Auth';
+import { ForgotPassword } from './pages/ForgotPassword';
 import { Home } from './pages/Home';
 import { MyPawns } from './pages/MyPawns';
 import { NotFound } from './pages/NotFound';
@@ -11,6 +12,9 @@ import { PawnDetails } from './pages/PawnDetails';
 import { PawnEditor } from './pages/PawnEditor';
 import { Profile } from './pages/Profile';
 import { Support } from './pages/Support';
+import { ResetPassword } from './pages/ResetPassword';
+import { VerifyEmail } from './pages/VerifyEmail';
+import { VerifyRequired } from './pages/VerifyRequired';
 import type { User } from './types';
 
 export function App() {
@@ -40,22 +44,29 @@ export function App() {
         <Route index element={<Home />} />
         <Route path="login" element={<Auth mode="login" onAuth={setUser} />} />
         <Route path="register" element={<Auth mode="register" onAuth={setUser} />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="reset-password" element={<ResetPassword />} />
+        <Route path="verify-email" element={<VerifyEmail onVerified={setUser} />} />
+        <Route
+          path="verify-required"
+          element={user ? <VerifyRequired user={user} onUserUpdate={setUser} /> : <Navigate to="/login" replace />}
+        />
         <Route path="pawns/:id" element={<PawnDetails user={user} />} />
         <Route path="profile" element={<Profile user={user} />} />
         <Route path="support" element={<Support />} />
         <Route path="create" element={<Navigate to="/add-pawn" replace />} />
         <Route
           path="add-pawn"
-          element={user ? <PawnEditor mode="create" /> : <Navigate to="/login" replace />}
+          element={user ? (user.emailVerifiedAt ? <PawnEditor mode="create" /> : <Navigate to="/verify-required" replace />) : <Navigate to="/login" replace />}
         />
         <Route
           path="pawns/:id/edit"
-          element={user ? <PawnEditor mode="edit" /> : <Navigate to="/login" replace />}
+          element={user ? (user.emailVerifiedAt ? <PawnEditor mode="edit" /> : <Navigate to="/verify-required" replace />) : <Navigate to="/login" replace />}
         />
         <Route path="my-pawns" element={user ? <MyPawns /> : <Navigate to="/login" replace />} />
         <Route
           path="admin"
-          element={user && (user.role === 'admin' || user.role === 'moderator') ? <Admin currentUser={user} /> : <Navigate to="/" replace />}
+          element={user && user.emailVerifiedAt && (user.role === 'admin' || user.role === 'moderator') ? <Admin currentUser={user} /> : <Navigate to={user ? '/verify-required' : '/'} replace />}
         />
         <Route path="*" element={<NotFound />} />
       </Route>

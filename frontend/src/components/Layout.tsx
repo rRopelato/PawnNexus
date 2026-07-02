@@ -40,9 +40,9 @@ export function Layout({ user, onLogout }: Props) {
           <nav className="hidden items-center gap-1 md:flex">
             <NavItem to="/">Browse</NavItem>
             {user ? <NavItem to="/my-pawns">My Pawns</NavItem> : null}
-            {user ? <NavItem to="/add-pawn">Add Pawn</NavItem> : null}
+            {user ? <NavItem to={user.emailVerifiedAt ? '/add-pawn' : '/verify-required'}>Add Pawn</NavItem> : null}
             <NavItem to="/support">Support</NavItem>
-            {user && (user.role === 'admin' || user.role === 'moderator') ? <NavItem to="/admin">Admin</NavItem> : null}
+            {user && user.emailVerifiedAt && (user.role === 'admin' || user.role === 'moderator') ? <NavItem to="/admin">Admin</NavItem> : null}
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
@@ -87,10 +87,10 @@ export function Layout({ user, onLogout }: Props) {
             <div className="mx-auto grid max-w-7xl gap-2 pt-4">
               <MobileNavItem to="/" onClick={closeMobileMenu}>Browse</MobileNavItem>
               {user ? <MobileNavItem to="/my-pawns" onClick={closeMobileMenu}>My Pawns</MobileNavItem> : null}
-              {user ? <MobileNavItem to="/add-pawn" onClick={closeMobileMenu}>Add Pawn</MobileNavItem> : null}
+              {user ? <MobileNavItem to={user.emailVerifiedAt ? '/add-pawn' : '/verify-required'} onClick={closeMobileMenu}>Add Pawn</MobileNavItem> : null}
               <MobileNavItem to="/support" onClick={closeMobileMenu}>Support</MobileNavItem>
               {user ? <MobileNavItem to="/profile" onClick={closeMobileMenu}>Profile</MobileNavItem> : null}
-              {user && (user.role === 'admin' || user.role === 'moderator') ? <MobileNavItem to="/admin" onClick={closeMobileMenu}>Admin</MobileNavItem> : null}
+              {user && user.emailVerifiedAt && (user.role === 'admin' || user.role === 'moderator') ? <MobileNavItem to="/admin" onClick={closeMobileMenu}>Admin</MobileNavItem> : null}
               {!user ? (
                 <div className="grid grid-cols-2 gap-2 pt-2">
                   <Link className="button-secondary justify-center" to="/login" onClick={closeMobileMenu}>

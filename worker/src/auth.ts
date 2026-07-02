@@ -54,8 +54,22 @@ export async function verifyToken(env: Env, token: string) {
   return result.payload;
 }
 
+export function createSecureToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return toBase64Url(bytes);
+}
+
+export async function hashToken(token: string) {
+  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(token));
+  return toBase64Url(new Uint8Array(digest));
+}
+
 function toBase64(bytes: Uint8Array) {
   return btoa(String.fromCharCode(...bytes));
+}
+
+function toBase64Url(bytes: Uint8Array) {
+  return toBase64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
 function fromBase64(value: string) {

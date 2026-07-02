@@ -1,12 +1,13 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
-import { hashPassword, signToken, verifyPassword, verifyToken } from './auth';
+import { createSecureToken, hashPassword, hashToken, signToken, verifyPassword, verifyToken } from './auth';
 import {
   canManagePawn,
   decayPawnActivity,
   getPawnById,
   getUserByEmail,
+  getUserByEmailOrPendingEmail,
   getUserById,
   getUserByLogin,
   getUserByUsername,
@@ -14,7 +15,8 @@ import {
   publicPawn,
   publicUser,
 } from './db';
-import { requireAdmin, requireAuth, requireModerator } from './middleware';
+import { sendPasswordResetEmail, sendVerificationEmail } from './email';
+import { requireAdmin, requireAuth, requireModerator, requireVerified } from './middleware';
 import type { BannedEmailRow, Env, PawnRow, UserRow, Variables } from './types';
 import {
   requireString,
@@ -37,6 +39,7 @@ app.use(
       'https://pawnnexus.com',
       'https://www.pawnnexus.com',
       'https://pawnnexus.pages.dev',
+      'https://pawnnexus-dev.pages.dev',
     ],
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -73,14 +76,16 @@ app.post('/register', async (c) => {
   const id = crypto.randomUUID();
   const passwordHash = await hashPassword(password);
 
-  await c.env.DB.prepare('INSERT INTO users (id, email, username, password_hash, role, status) VALUES (?, ?, ?, ?, ?, ?)')
+  await c.env.DB.prepare('INSERT INTO users (id, email, username, password_hash, role, status, email_verified_at) VALUES (?, ?, ?, ?, ?, ?, NULL)')
     .bind(id, email, username, passwordHash, 'user', 'active')
     .run();
 
   const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<UserRow>();
   if (!user) throw new HTTPException(500, { message: 'Unable to create user' });
 
-  return c.json({ token: await signToken(c.env, user), user: publicUser(user) }, 201);
+  await createAndSendVerification(c.env, user, user.email, false);
+
+  return c.json({ token: await signToken(c.env, authUserFromRow(user)), user: publicUser(user) }, 201);
 });
 
 app.post('/login', async (c) => {
@@ -93,7 +98,134 @@ app.post('/login', async (c) => {
     throw new HTTPException(401, { message: 'Invalid username, email, or password' });
   }
 
-  return c.json({ token: await signToken(c.env, user), user: publicUser(user) });
+  return c.json({ token: await signToken(c.env, authUserFromRow(user)), user: publicUser(user) });
+});
+
+app.post('/verify-email', async (c) => {
+  const body = await c.req.json<Record<string, unknown>>();
+  const token = requireString(body.token, 'token', 500);
+  const tokenHash = await hashToken(token);
+  const row = await c.env.DB.prepare(
+    `SELECT email_verification_tokens.*, users.status AS user_status
+     FROM email_verification_tokens
+     JOIN users ON users.id = email_verification_tokens.user_id
+     WHERE token_hash = ? AND used_at IS NULL AND expires_at > datetime('now')`,
+  )
+    .bind(tokenHash)
+    .first<{ id: string; user_id: string; email: string; user_status: string }>();
+
+  if (!row || row.user_status !== 'active') {
+    throw new HTTPException(400, { message: 'Verification link is invalid or expired' });
+  }
+
+  await c.env.DB.prepare(
+    "UPDATE users SET email = ?, pending_email = NULL, email_verified_at = datetime('now') WHERE id = ?",
+  )
+    .bind(row.email, row.user_id)
+    .run();
+  await c.env.DB.prepare("UPDATE email_verification_tokens SET used_at = datetime('now') WHERE id = ?").bind(row.id).run();
+
+  const user = await getUserById(c.env.DB, row.user_id);
+  if (!user) throw new HTTPException(404, { message: 'User not found' });
+  return c.json({ user: publicUser(user) });
+});
+
+app.post('/resend-verification', requireAuth, async (c) => {
+  const current = c.get('user');
+  const user = await getUserById(c.env.DB, current.id);
+  if (!user) throw new HTTPException(404, { message: 'User not found' });
+
+  if (user.email_verified_at) {
+    return c.json({ ok: true, user: publicUser(user) });
+  }
+
+  await createAndSendVerification(c.env, user, user.pending_email ?? user.email, true);
+  return c.json({ ok: true, user: publicUser(user) });
+});
+
+app.post('/change-email', requireAuth, async (c) => {
+  const current = c.get('user');
+  const user = await getUserById(c.env.DB, current.id);
+  if (!user) throw new HTTPException(404, { message: 'User not found' });
+  if (user.email_verified_at) throw new HTTPException(400, { message: 'Email is already verified' });
+
+  const body = await c.req.json<Record<string, unknown>>();
+  const email = validateEmail(body.email);
+  if (await isEmailBanned(c.env.DB, email)) {
+    throw new HTTPException(403, { message: 'This email cannot be used' });
+  }
+
+  const existing = await getUserByEmailOrPendingEmail(c.env.DB, email);
+  if (existing && existing.id !== user.id) {
+    throw new HTTPException(409, { message: 'email is already registered' });
+  }
+
+  await c.env.DB.prepare('UPDATE users SET email = ?, pending_email = NULL, email_verified_at = NULL WHERE id = ?')
+    .bind(email, user.id)
+    .run();
+  const updated = await getUserById(c.env.DB, user.id);
+  if (!updated) throw new HTTPException(500, { message: 'Unable to update email' });
+
+  await createAndSendVerification(c.env, updated, email, false);
+  return c.json({ user: publicUser(updated) });
+});
+
+app.post('/forgot-password', async (c) => {
+  const body = await c.req.json<Record<string, unknown>>();
+  let email: string | null = null;
+
+  try {
+    email = validateEmail(body.email);
+  } catch {
+    return c.json({ ok: true });
+  }
+
+  const user = await getUserByEmail(c.env.DB, email);
+  if (user && user.status === 'active' && !(await isEmailBanned(c.env.DB, user.email))) {
+    const recent = await c.env.DB.prepare(
+      "SELECT id FROM password_reset_tokens WHERE user_id = ? AND used_at IS NULL AND created_at > datetime('now', '-10 minutes') LIMIT 1",
+    )
+      .bind(user.id)
+      .first<{ id: string }>();
+
+    if (!recent) {
+      const token = createSecureToken();
+      await c.env.DB.prepare(
+        "INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at) VALUES (?, ?, ?, datetime('now', '+1 hour'))",
+      )
+        .bind(crypto.randomUUID(), user.id, await hashToken(token))
+        .run();
+      await sendPasswordResetEmail(c.env, user.email, token);
+    }
+  }
+
+  return c.json({ ok: true });
+});
+
+app.post('/reset-password', async (c) => {
+  const body = await c.req.json<Record<string, unknown>>();
+  const token = requireString(body.token, 'token', 500);
+  const password = validatePassword(body.password);
+  const tokenHash = await hashToken(token);
+  const row = await c.env.DB.prepare(
+    `SELECT password_reset_tokens.*, users.status AS user_status
+     FROM password_reset_tokens
+     JOIN users ON users.id = password_reset_tokens.user_id
+     WHERE token_hash = ? AND used_at IS NULL AND expires_at > datetime('now')`,
+  )
+    .bind(tokenHash)
+    .first<{ id: string; user_id: string; user_status: string }>();
+
+  if (!row || row.user_status !== 'active') {
+    throw new HTTPException(400, { message: 'Reset link is invalid or expired' });
+  }
+
+  await c.env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?")
+    .bind(await hashPassword(password), row.user_id)
+    .run();
+  await c.env.DB.prepare("UPDATE password_reset_tokens SET used_at = datetime('now') WHERE id = ?").bind(row.id).run();
+
+  return c.json({ ok: true });
 });
 
 app.get('/me', requireAuth, async (c) => {
@@ -202,7 +334,7 @@ app.get('/pawns/:id', async (c) => {
   return c.json({ pawn: publicPawn(pawn) });
 });
 
-app.post('/pawns', requireAuth, async (c) => {
+app.post('/pawns', requireAuth, requireVerified, async (c) => {
   const user = c.get('user');
   const body = await c.req.json<Record<string, unknown>>();
   const payload = validatePawnPayload(body);
@@ -263,7 +395,7 @@ app.post('/pawns', requireAuth, async (c) => {
   return c.json({ pawn: publicPawn(pawn) }, 201);
 });
 
-app.put('/pawns/:id', requireAuth, async (c) => {
+app.put('/pawns/:id', requireAuth, requireVerified, async (c) => {
   const user = c.get('user');
   const pawn = await getPawnById(c.env.DB, c.req.param('id'));
   if (!pawn) throw new HTTPException(404, { message: 'Pawn not found' });
@@ -327,7 +459,7 @@ app.put('/pawns/:id', requireAuth, async (c) => {
   return c.json({ pawn: publicPawn(updated) });
 });
 
-app.post('/pawns/:id/refresh', requireAuth, async (c) => {
+app.post('/pawns/:id/refresh', requireAuth, requireVerified, async (c) => {
   const user = c.get('user');
   const pawn = await getPawnById(c.env.DB, c.req.param('id'));
   if (!pawn) throw new HTTPException(404, { message: 'Pawn not found' });
@@ -354,7 +486,7 @@ app.delete('/pawns/:id', requireAuth, async (c) => {
   return c.json({ ok: true });
 });
 
-app.post("/upload", requireAuth, async (c) => {
+app.post("/upload", requireAuth, requireVerified, async (c) => {
   const form = await c.req.formData();
   const count = Number(form.get("count") ?? 0);
 
@@ -452,7 +584,7 @@ app.get('/admin/users', requireAuth, requireAdmin, async (c) => {
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const count = await c.env.DB.prepare(`SELECT COUNT(*) AS count FROM users ${where}`).bind(...values).first<{ count: number }>();
   const result = await c.env.DB.prepare(
-    `SELECT id, email, username, role, status, created_at
+    `SELECT id, email, username, role, status, email_verified_at, pending_email, created_at
      FROM users
      ${where}
      ORDER BY created_at DESC
@@ -578,10 +710,44 @@ async function getOptionalUser(c: { req: { header: (name: string) => string | un
     const payload = await verifyToken(c.env, token);
     const user = await getUserById(c.env.DB, payload.id);
     if (!user || user.status !== 'active' || (await isEmailBanned(c.env.DB, user.email))) return null;
-    return { id: user.id, email: user.email, username: user.username, role: user.role, status: user.status };
+    return authUserFromRow(user);
   } catch {
     return null;
   }
+}
+
+
+function authUserFromRow(user: UserRow) {
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    role: user.role,
+    status: user.status,
+    emailVerifiedAt: user.email_verified_at ?? null,
+    pendingEmail: user.pending_email ?? null,
+  };
+}
+
+async function createAndSendVerification(env: Env, user: UserRow, email: string, respectCooldown: boolean) {
+  if (respectCooldown) {
+    const recent = await env.DB.prepare(
+      "SELECT id FROM email_verification_tokens WHERE user_id = ? AND lower(email) = lower(?) AND used_at IS NULL AND created_at > datetime('now', '-5 minutes') LIMIT 1",
+    )
+      .bind(user.id, email)
+      .first<{ id: string }>();
+
+    if (recent) return;
+  }
+
+  const token = createSecureToken();
+  await env.DB.prepare(
+    "INSERT INTO email_verification_tokens (id, user_id, email, token_hash, expires_at) VALUES (?, ?, ?, ?, datetime('now', '+24 hours'))",
+  )
+    .bind(crypto.randomUUID(), user.id, email, await hashToken(token))
+    .run();
+
+  await sendVerificationEmail(env, email, token);
 }
 
 async function decayPawns(db: D1Database, pawns: PawnRow[]) {

@@ -12,28 +12,42 @@ export const requireAuth = createMiddleware<{ Bindings: Env; Variables: Variable
     throw new HTTPException(401, { message: 'Authentication required' });
   }
 
-  try {
-    const payload = await verifyToken(c.env, token);
-    const user = await getUserById(c.env.DB, payload.id);
-    if (!user || user.status !== 'active' || (await isEmailBanned(c.env.DB, user.email))) {
-      throw new HTTPException(401, { message: 'Authentication required' });
-    }
-
-    c.set('user', {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      role: user.role,
-      status: user.status,
-    });
-    await next();
-  } catch {
+  const payload = await verifyToken(c.env, token).catch(() => null);
+  if (!payload) {
     throw new HTTPException(401, { message: 'Authentication required' });
   }
+
+  const user = await getUserById(c.env.DB, payload.id);
+  if (!user || user.status !== 'active' || (await isEmailBanned(c.env.DB, user.email))) {
+    throw new HTTPException(401, { message: 'Authentication required' });
+  }
+
+  c.set('user', {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    role: user.role,
+    status: user.status,
+    emailVerifiedAt: user.email_verified_at ?? null,
+    pendingEmail: user.pending_email ?? null,
+  });
+  await next();
+});
+
+export const requireVerified = createMiddleware<{ Bindings: Env; Variables: Variables }>(async (c, next) => {
+  const user = c.get('user');
+  if (!user.emailVerifiedAt) {
+    throw new HTTPException(403, { message: 'Email verification required' });
+  }
+
+  await next();
 });
 
 export const requireAdmin = createMiddleware<{ Bindings: Env; Variables: Variables }>(async (c, next) => {
   const user = c.get('user');
+  if (!user.emailVerifiedAt) {
+    throw new HTTPException(403, { message: 'Email verification required' });
+  }
   if (user.role !== 'admin') {
     throw new HTTPException(403, { message: 'Admin access required' });
   }
@@ -43,6 +57,9 @@ export const requireAdmin = createMiddleware<{ Bindings: Env; Variables: Variabl
 
 export const requireModerator = createMiddleware<{ Bindings: Env; Variables: Variables }>(async (c, next) => {
   const user = c.get('user');
+  if (!user.emailVerifiedAt) {
+    throw new HTTPException(403, { message: 'Email verification required' });
+  }
   if (user.role !== 'admin' && user.role !== 'moderator') {
     throw new HTTPException(403, { message: 'Moderator access required' });
   }
