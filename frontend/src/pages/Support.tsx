@@ -1,4 +1,4 @@
-import { Coffee, Copy, Github, Heart, QrCode, Shield, Swords } from 'lucide-react';
+import { Coffee, Copy, Github, Globe, Heart, Linkedin, MessageCircle, QrCode, Shield, Swords } from 'lucide-react';
 import { creator } from '../lib/support';
 
 export function Support() {
@@ -62,9 +62,20 @@ export function Support() {
               <p className="mt-1 text-sm text-zinc-400">
                 I build PawnNexus as a lightweight Cloudflare project for portfolio, learning, and the DD2 community.
               </p>
-              <a className="mt-4 inline-flex items-center gap-2 text-sm text-ember-500 hover:text-ember-600" href={creator.githubUrl} target="_blank" rel="noreferrer">
-                <Github size={16} /> GitHub contact
-              </a>
+              <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+                <a className="inline-flex items-center gap-2 text-ember-500 hover:text-ember-600" href={creator.githubUrl} target="_blank" rel="noreferrer">
+                  <Github size={16} /> GitHub
+                </a>
+                <a className="inline-flex items-center gap-2 text-ember-500 hover:text-ember-600" href={creator.linkedInUrl} target="_blank" rel="noreferrer">
+                  <Linkedin size={16} /> LinkedIn
+                </a>
+                <a className="inline-flex items-center gap-2 text-ember-500 hover:text-ember-600" href={creator.portfolioUrl} target="_blank" rel="noreferrer">
+                  <Globe size={16} /> Portfolio
+                </a>
+                <span className="inline-flex items-center gap-2 text-zinc-300">
+                  <MessageCircle size={16} /> Discord: {creator.discordUsername}
+                </span>
+              </div>
             </div>
           </div>
         </div>

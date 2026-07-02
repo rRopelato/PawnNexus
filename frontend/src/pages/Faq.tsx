@@ -1,4 +1,4 @@
-import { Github, Heart, Mail, Shield, Sparkles, Upload, UserCheck } from 'lucide-react';
+import { Github, Globe, Heart, Linkedin, Mail, MessageCircle, Shield, Sparkles, Upload, UserCheck } from 'lucide-react';
 import { Link } from 'react-router';
 import { creator } from '../lib/support';
 
@@ -148,11 +148,16 @@ export function Faq() {
             <div>
               <h2 className="text-lg font-semibold text-white">Who made this?</h2>
               <p className="mt-2 text-sm leading-6 text-zinc-400">
-                PawnNexus is made by {creator.name}, a developer building this project as a portfolio piece and a useful DD2 community tool.
+                PawnNexus is made by {creator.name}, a developer building this project as a portfolio piece and a useful DD2 community tool. You can also see more of my work on my portfolio.
               </p>
-              <a className="mt-4 inline-flex items-center gap-2 text-sm text-ember-500 hover:text-ember-600" href={creator.githubUrl} target="_blank" rel="noreferrer">
-                Contact on GitHub
-              </a>
+              <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                <a className="inline-flex items-center gap-2 text-ember-500 hover:text-ember-600" href={creator.githubUrl} target="_blank" rel="noreferrer">
+                  <Github size={16} /> GitHub
+                </a>
+                <a className="inline-flex items-center gap-2 text-ember-500 hover:text-ember-600" href={creator.portfolioUrl} target="_blank" rel="noreferrer">
+                  <Globe size={16} /> Portfolio
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -184,7 +189,7 @@ export function Faq() {
           <div>
             <h2 className="text-lg font-semibold text-white">Contact</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
-              The best contact path for now is GitHub. Open an issue, send feedback through the repository, or reach me through my profile.
+You can contact me through GitHub, LinkedIn, or Discord. For portfolio and other projects, visit ropelato.dev.br.
             </p>
           </div>
         </div>
