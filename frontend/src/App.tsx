@@ -4,6 +4,7 @@ import { Layout } from './components/Layout';
 import { api, getToken } from './lib/api';
 import { Admin } from './pages/Admin';
 import { Auth } from './pages/Auth';
+import { Faq } from './pages/Faq';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { Home } from './pages/Home';
 import { MyPawns } from './pages/MyPawns';
@@ -53,6 +54,7 @@ export function App() {
         />
         <Route path="pawns/:id" element={<PawnDetails user={user} />} />
         <Route path="profile" element={<Profile user={user} />} />
+        <Route path="faq" element={<Faq />} />
         <Route path="support" element={<Support />} />
         <Route path="create" element={<Navigate to="/add-pawn" replace />} />
         <Route
