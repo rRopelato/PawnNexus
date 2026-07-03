@@ -40,7 +40,6 @@ export function Layout({ user, onLogout }: Props) {
           <nav className="hidden items-center gap-1 md:flex">
             <NavItem to="/">Browse</NavItem>
             {user ? <NavItem to="/my-pawns">My Pawns</NavItem> : null}
-            {user ? <NavItem to={user.emailVerifiedAt ? '/add-pawn' : '/verify-required'}>Add Pawn</NavItem> : null}
             <NavItem to="/faq">FAQ</NavItem>
             <NavItem to="/support">Support</NavItem>
             {user && user.emailVerifiedAt && (user.role === 'admin' || user.role === 'moderator') ? <NavItem to="/admin">Admin</NavItem> : null}
@@ -88,7 +87,6 @@ export function Layout({ user, onLogout }: Props) {
             <div className="mx-auto grid max-w-7xl gap-2 pt-4">
               <MobileNavItem to="/" onClick={closeMobileMenu}>Browse</MobileNavItem>
               {user ? <MobileNavItem to="/my-pawns" onClick={closeMobileMenu}>My Pawns</MobileNavItem> : null}
-              {user ? <MobileNavItem to={user.emailVerifiedAt ? '/add-pawn' : '/verify-required'} onClick={closeMobileMenu}>Add Pawn</MobileNavItem> : null}
               <MobileNavItem to="/faq" onClick={closeMobileMenu}>FAQ</MobileNavItem>
               <MobileNavItem to="/support" onClick={closeMobileMenu}>Support</MobileNavItem>
               {user ? <MobileNavItem to="/profile" onClick={closeMobileMenu}>Profile</MobileNavItem> : null}

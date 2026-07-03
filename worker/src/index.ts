@@ -259,6 +259,11 @@ app.get('/pawns', async (c) => {
   const search = c.req.query('search')?.trim();
   const specialization = c.req.query('specialization')?.trim();
   const inclination = c.req.query('inclination')?.trim();
+  const sort = normalizePawnSort(c.req.query('sort'));
+  const requestedPage = Number(c.req.query('page') ?? 1);
+  const requestedPageSize = Number(c.req.query('pageSize') ?? 12);
+  const page = Number.isFinite(requestedPage) ? Math.max(1, requestedPage) : 1;
+  const pageSize = Number.isFinite(requestedPageSize) ? Math.min(12, Math.max(6, requestedPageSize)) : 12;
 
   const conditions = ['pawns.status = ?'];
   const values: (string | number)[] = ['approved'];
@@ -308,14 +313,25 @@ app.get('/pawns', async (c) => {
      FROM pawns
      JOIN users ON users.id = pawns.user_id
      WHERE ${conditions.join(' AND ')}
-     ORDER BY pawns.created_at DESC
-     LIMIT 100`,
+     ORDER BY ${sqlPawnOrder(sort)}
+     LIMIT 500`,
   )
     .bind(...values)
     .all<PawnRow>();
 
-  const pawns = await decayPawns(c.env.DB, result.results);
-  return c.json({ pawns: pawns.filter(isPubliclyActive).slice(0, 60).map(publicPawn) });
+  const pawns = (await decayPawns(c.env.DB, result.results)).filter(isPubliclyActive).sort((a, b) => sortPawns(a, b, sort));
+  const total = pawns.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const offset = (safePage - 1) * pageSize;
+
+  return c.json({
+    pawns: pawns.slice(offset, offset + pageSize).map(publicPawn),
+    page: safePage,
+    pageSize,
+    total,
+    totalPages,
+  });
 });
 
 app.get('/pawns/:id', async (c) => {
@@ -752,6 +768,28 @@ async function createAndSendVerification(env: Env, user: UserRow, email: string,
 
 async function decayPawns(db: D1Database, pawns: PawnRow[]) {
   return Promise.all(pawns.map((pawn) => decayPawnActivity(db, pawn)));
+}
+
+
+function normalizePawnSort(sort: string | undefined) {
+  if (sort === 'recently-refreshed' || sort === 'random' || sort === 'level-desc' || sort === 'level-asc') return sort;
+  return 'newest';
+}
+
+function sqlPawnOrder(sort: string) {
+  if (sort === 'recently-refreshed') return 'pawns.last_refreshed_at DESC, pawns.created_at DESC';
+  if (sort === 'random') return 'random()';
+  if (sort === 'level-desc') return 'pawns.level DESC, pawns.created_at DESC';
+  if (sort === 'level-asc') return 'pawns.level ASC, pawns.created_at DESC';
+  return 'pawns.created_at DESC';
+}
+
+function sortPawns(a: PawnRow, b: PawnRow, sort: string) {
+  if (sort === 'recently-refreshed') return Date.parse(b.last_refreshed_at) - Date.parse(a.last_refreshed_at) || Date.parse(b.created_at) - Date.parse(a.created_at);
+  if (sort === 'level-desc') return b.level - a.level || Date.parse(b.created_at) - Date.parse(a.created_at);
+  if (sort === 'level-asc') return a.level - b.level || Date.parse(b.created_at) - Date.parse(a.created_at);
+  if (sort === 'random') return 0;
+  return Date.parse(b.created_at) - Date.parse(a.created_at);
 }
 
 function isPubliclyActive(pawn: PawnRow) {

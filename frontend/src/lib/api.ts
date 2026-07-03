@@ -91,11 +91,11 @@ export const api = {
   async pawns(filters: PawnFilters = {}) {
     const search = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
-      if (value) search.set(key, value);
+      if (value) search.set(key, String(value));
     });
 
     const suffix = search.toString() ? `?${search.toString()}` : '';
-    return request<{ pawns: Pawn[] }>(`/pawns${suffix}`);
+    return request<{ pawns: Pawn[]; page: number; pageSize: number; total: number; totalPages: number }>(`/pawns${suffix}`);
   },
   async pawn(id: string) {
     return request<{ pawn: Pawn }>(`/pawns/${id}`, { auth: true });

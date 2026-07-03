@@ -86,6 +86,8 @@ export type Pawn = {
   updatedAt: string;
 };
 
+export type PawnSort = 'newest' | 'recently-refreshed' | 'random' | 'level-desc' | 'level-asc';
+
 export type PawnFilters = {
   platform?: string;
   vocation?: string;
@@ -94,6 +96,9 @@ export type PawnFilters = {
   search?: string;
   specialization?: string;
   inclination?: string;
+  sort?: PawnSort;
+  page?: number;
+  pageSize?: number;
 };
 
 export type AdminUsersResult = {

@@ -7,5 +7,6 @@ dist
 *.local
 coverage
 .DS_Store
-
+CODEX_ROADMAP.md
 *.tsbuildinfo
+backups

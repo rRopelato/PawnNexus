@@ -79,6 +79,34 @@ npm run dev:frontend
 npm run dev:worker
 ```
 
+
+## Syncing Dev Data
+
+Use this before starting a new development block when you want the dev site to contain the same users and pawns as production:
+
+```bash
+npm run sync-dev
+```
+
+What it does:
+
+- Reads data from the production D1 database `pawnnexus`.
+- Writes only to the development D1 database `pawnnexus-dev`.
+- Applies pending dev migrations before syncing, so the dev schema is ready.
+- Clears dev application tables before copying production rows.
+- Preserves IDs, timestamps, roles, pawn status, email verification fields, image URLs, and pawn data.
+- Keeps `d1_migrations` intact.
+- Does not modify production data.
+- Does not copy R2 images because dev and production use the same R2 bucket.
+- Does not send emails.
+- Does not copy active email verification or password reset tokens.
+
+For non-interactive usage, pass the explicit confirmation flag:
+
+```bash
+npm run sync-dev -- --yes
+```
+
 ## Environment
 
 The project requires Cloudflare resources and a few environment variables.
