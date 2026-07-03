@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { PawnCard } from '../components/PawnCard';
 import { api } from '../lib/api';
 import { inclinations, platforms, specializations, vocations } from '../lib/constants';
@@ -14,11 +15,17 @@ const sortOptions: Array<{ value: PawnSort; label: string }> = [
 ];
 
 export function Home() {
+  const [searchParams] = useSearchParams();
   const [pawns, setPawns] = useState<Pawn[]>([]);
-  const [filters, setFilters] = useState<PawnFilters>(() => ({ page: 1, pageSize: getBrowsePageSize(), sort: 'newest' }));
+  const [filters, setFilters] = useState<PawnFilters>(() => getInitialBrowseFilters(searchParams));
   const [meta, setMeta] = useState({ page: 1, pageSize: getBrowsePageSize(), total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const search = searchParams.get('search') ?? '';
+    setFilters((current) => (current.search ?? '') === search ? current : { ...current, search, page: 1 });
+  }, [searchParams]);
 
   useEffect(() => {
     function syncPageSize() {
@@ -187,6 +194,15 @@ export function Home() {
       ) : null}
     </div>
   );
+}
+
+function getInitialBrowseFilters(searchParams: URLSearchParams): PawnFilters {
+  return {
+    page: 1,
+    pageSize: getBrowsePageSize(),
+    sort: 'newest',
+    search: searchParams.get('search') ?? undefined,
+  };
 }
 
 function getBrowsePageSize() {

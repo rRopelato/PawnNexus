@@ -1,14 +1,15 @@
 import { Link } from 'react-router';
-import { BadgeCheck, Gamepad2, Star } from 'lucide-react';
+import { BadgeCheck, Clock, Gamepad2, Star, UserRound } from 'lucide-react';
 import type { Pawn } from '../types';
 
 export function PawnCard({ pawn }: { pawn: Pawn }) {
+  const ownerSearchUrl = '/?search=' + encodeURIComponent(pawn.ownerUsername);
+
   return (
-    <Link
-      to={`/pawns/${pawn.id}`}
-      className="group overflow-hidden rounded border border-white/10 bg-ash-900 transition hover:border-ember-500/50 hover:shadow-glow"
-    >
-      <div className="aspect-[4/3] overflow-hidden bg-ash-850">
+    <article className="group relative overflow-hidden rounded border border-white/10 bg-ash-900 transition duration-200 hover:-translate-y-0.5 hover:border-ember-500/50 hover:shadow-glow">
+      <Link to={`/pawns/${pawn.id}`} className="absolute inset-0 z-0" aria-label={`Open ${pawn.pawnName}'s pawn details`} />
+
+      <div className="relative aspect-[4/3] overflow-hidden bg-ash-850">
         {pawn.thumbnailUrl ? (
           <img
             src={pawn.thumbnailUrl}
@@ -22,26 +23,69 @@ export function PawnCard({ pawn }: { pawn: Pawn }) {
             <Gamepad2 size={42} />
           </div>
         )}
-      </div>
-      <div className="space-y-3 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-white">{pawn.pawnName}</h2>
-            <p className="text-sm text-zinc-400">Arisen: {pawn.arisenName}</p>
-          </div>
-          {pawn.status === 'approved' ? <BadgeCheck className="shrink-0 text-ember-500" size={20} /> : null}
+
+        <div className="absolute left-3 top-3 flex items-center gap-2 rounded border border-black/30 bg-ash-950/85 px-2 py-1 text-xs font-medium text-white backdrop-blur">
+          <VocationIcon vocation={pawn.vocation} />
+          {pawn.vocation}
         </div>
+
+        <div className="absolute right-3 top-3 flex gap-2">
+          {pawn.status === 'approved' ? (
+            <span className="inline-flex items-center gap-1 rounded border border-emerald-400/30 bg-emerald-500/15 px-2 py-1 text-xs font-medium text-emerald-100">
+              <BadgeCheck size={13} /> Approved
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded border border-ember-500/30 bg-ember-500/15 px-2 py-1 text-xs font-medium text-ember-100">
+              <Clock size={13} /> {pawn.status}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="relative z-10 space-y-4 p-4">
+        <div className="space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-semibold text-white transition group-hover:text-ember-500">{pawn.pawnName}</h2>
+              <p className="truncate text-sm text-zinc-400">Arisen: {pawn.arisenName}</p>
+            </div>
+            <span className="shrink-0 rounded border border-ember-500/30 bg-ember-500/10 px-2 py-1 text-sm font-semibold text-ember-500">
+              Lv. {pawn.level}
+            </span>
+          </div>
+
+          <Link
+            to={ownerSearchUrl}
+            className="relative z-20 inline-flex max-w-full items-center gap-1.5 text-sm text-zinc-400 transition hover:text-ember-500"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <UserRound size={14} />
+            <span className="truncate">{pawn.ownerUsername}</span>
+          </Link>
+        </div>
+
         <div className="flex flex-wrap gap-2 text-xs">
-          <span className="tag">Lv. {pawn.level}</span>
+          <span className="tag">{pawn.platform}</span>
           <span className="tag">{pawn.gender}</span>
           <span className="tag">{pawn.race}</span>
-          <span className="tag">{pawn.vocation}</span>
-          <span className="tag">{pawn.platform}</span>
+          {pawn.specialization ? <span className="tag">{pawn.specialization}</span> : null}
           <span className="tag gap-1" title="Activity stars">
             <Star size={12} className="text-ember-500" /> {pawn.activityStars}/3
           </span>
         </div>
       </div>
-    </Link>
+    </article>
+  );
+}
+
+function VocationIcon({ vocation }: { vocation: string }) {
+  const name = vocation.toLowerCase();
+  return (
+    <img
+      className="h-5 w-5 object-contain"
+      src={`https://cdn.pawnnexus.com/${name}.png`}
+      alt={`${vocation} vocation icon`}
+      loading="lazy"
+    />
   );
 }
