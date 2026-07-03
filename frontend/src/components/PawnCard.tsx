@@ -6,10 +6,10 @@ export function PawnCard({ pawn }: { pawn: Pawn }) {
   const ownerSearchUrl = '/?search=' + encodeURIComponent(pawn.ownerUsername);
 
   return (
-    <article className="group relative overflow-hidden rounded border border-white/10 bg-ash-900 transition duration-200 hover:-translate-y-0.5 hover:border-ember-500/50 hover:shadow-glow">
-      <Link to={`/pawns/${pawn.id}`} className="absolute inset-0 z-0" aria-label={`Open ${pawn.pawnName}'s pawn details`} />
+    <article className="group relative cursor-pointer overflow-hidden rounded border border-white/10 bg-ash-900 transition duration-200 hover:-translate-y-0.5 hover:border-ember-500/50 hover:shadow-glow">
+      <Link to={`/pawns/${pawn.id}`} className="absolute inset-0 z-10" aria-label={`Open ${pawn.pawnName}'s pawn details`} />
 
-      <div className="relative aspect-[4/3] overflow-hidden bg-ash-850">
+      <div className="pointer-events-none relative aspect-[4/3] overflow-hidden bg-ash-850">
         {pawn.thumbnailUrl ? (
           <img
             src={pawn.thumbnailUrl}
@@ -42,7 +42,7 @@ export function PawnCard({ pawn }: { pawn: Pawn }) {
         </div>
       </div>
 
-      <div className="relative z-10 space-y-4 p-4">
+      <div className="pointer-events-none relative z-0 space-y-4 p-4">
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -56,7 +56,7 @@ export function PawnCard({ pawn }: { pawn: Pawn }) {
 
           <Link
             to={ownerSearchUrl}
-            className="relative z-20 inline-flex max-w-full items-center gap-1.5 text-sm text-zinc-400 transition hover:text-ember-500"
+            className="pointer-events-auto relative z-20 inline-flex max-w-full items-center gap-1.5 text-sm text-zinc-400 transition hover:text-ember-500"
             onClick={(event) => event.stopPropagation()}
           >
             <UserRound size={14} />
