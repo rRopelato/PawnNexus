@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Filter, Search, SlidersHorizontal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { PawnCard } from '../components/PawnCard';
@@ -21,6 +21,7 @@ export function Home() {
   const [meta, setMeta] = useState({ page: 1, pageSize: getBrowsePageSize(), total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
     const search = searchParams.get('search') ?? '';
@@ -72,18 +73,18 @@ export function Home() {
 
   return (
     <div className="space-y-8">
-      <section className="grid gap-6 border-b border-white/10 pb-8 lg:grid-cols-[1fr_360px] lg:items-end">
-        <div className="space-y-4">
-          <p className="text-sm uppercase tracking-[0.2em] text-ember-500">Dragon's Dogma 2</p>
-          <h1 className="max-w-3xl text-4xl font-semibold text-white md:text-6xl">Find the right Pawn for the road ahead.</h1>
-          <p className="max-w-2xl text-zinc-400">
-            Browse community Pawns by platform, vocation, level, and name. New submissions are reviewed before they appear publicly.
-          </p>
-        </div>
+      <section className="space-y-4 border-b border-white/10 pb-8">
+        <p className="text-sm uppercase tracking-[0.2em] text-ember-500">Dragon's Dogma 2</p>
+        <h1 className="max-w-3xl text-4xl font-semibold text-white md:text-6xl">Find the right Pawn for the road ahead.</h1>
+        <p className="max-w-2xl text-zinc-400">
+          Browse community Pawns by platform, vocation, level, and name. New submissions are reviewed before they appear publicly.
+        </p>
+      </section>
 
-        <div className="rounded border border-white/10 bg-ash-900 p-4">
+      <section className="space-y-6">
+        <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
           <label className="space-y-2 text-sm text-zinc-300">
-            <span className="inline-flex items-center gap-2">
+            <span className="inline-flex items-center gap-2 font-medium text-zinc-200">
               <Search size={16} className="text-ember-500" /> Search
             </span>
             <div className="relative">
@@ -96,68 +97,97 @@ export function Home() {
               />
             </div>
           </label>
-        </div>
-      </section>
 
-      <section className="grid gap-4 md:grid-cols-5">
-        <select value={filters.platform ?? ''} onChange={(event) => updateFilters({ platform: event.target.value })}>
-          <option value="">All platforms</option>
-          {platforms.map((platform) => (
-            <option key={platform}>{platform}</option>
-          ))}
-        </select>
-        <label className="relative block">
-          <VocationIcon vocation={filters.vocation as Vocation | undefined} />
-          <select className="pl-11" value={filters.vocation ?? ''} onChange={(event) => updateFilters({ vocation: event.target.value })}>
-            <option value="">All vocations</option>
-            {vocations.map((vocation) => (
-              <option key={vocation}>{vocation}</option>
-            ))}
-          </select>
-        </label>
-        <input
-          type="number"
-          min={1}
-          placeholder="Min level"
-          value={filters.minLevel ?? ''}
-          onChange={(event) => updateFilters({ minLevel: event.target.value })}
-        />
-        <input
-          type="number"
-          min={1}
-          placeholder="Max level"
-          value={filters.maxLevel ?? ''}
-          onChange={(event) => updateFilters({ maxLevel: event.target.value })}
-        />
-        <div className="h-full">
-          <label className="sr-only" htmlFor="pawn-sort">Sort</label>
-          <select id="pawn-sort" className="h-full" value={filters.sort ?? 'newest'} onChange={(event) => updateFilters({ sort: event.target.value as PawnSort })}>
-            {sortOptions.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
+          <label className="space-y-2 text-sm text-zinc-300">
+            <span className="inline-flex items-center gap-2 font-medium text-zinc-200">
+              <ArrowUpDown size={16} className="text-ember-500" /> Sort
+            </span>
+            <select value={filters.sort ?? 'newest'} onChange={(event) => updateFilters({ sort: event.target.value as PawnSort })}>
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
         </div>
-      </section>
 
-      <section className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-        <ComingSoonFilter label="Weapon skills" />
-        <ComingSoonFilter label="Weapon" />
-        <ComingSoonFilter label="Augments" />
-        <ComingSoonFilter label="Armor" />
-        <label className="space-y-2 text-sm text-zinc-300">
-          <span>Inclination</span>
-          <select value={filters.inclination ?? ''} onChange={(event) => updateFilters({ inclination: event.target.value })}>
-            <option value="">All inclinations</option>
-            {inclinations.map((inclination) => <option key={inclination}>{inclination}</option>)}
-          </select>
-        </label>
-        <label className="space-y-2 text-sm text-zinc-300">
-          <span>Specialization</span>
-          <select value={filters.specialization ?? ''} onChange={(event) => updateFilters({ specialization: event.target.value })}>
-            <option value="">All specializations</option>
-            {specializations.map((specialization) => <option key={specialization}>{specialization}</option>)}
-          </select>
-        </label>
+        <div className="space-y-3">
+          <h2 className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-zinc-400">
+            <Filter size={15} className="text-ember-500" /> Basic filters
+          </h2>
+          <div className="grid gap-4 md:grid-cols-4">
+            <select value={filters.platform ?? ''} onChange={(event) => updateFilters({ platform: event.target.value })}>
+              <option value="">All platforms</option>
+              {platforms.map((platform) => (
+                <option key={platform}>{platform}</option>
+              ))}
+            </select>
+            <label className="relative block">
+              <VocationIcon vocation={filters.vocation as Vocation | undefined} />
+              <select className="pl-11" value={filters.vocation ?? ''} onChange={(event) => updateFilters({ vocation: event.target.value })}>
+                <option value="">All vocations</option>
+                {vocations.map((vocation) => (
+                  <option key={vocation}>{vocation}</option>
+                ))}
+              </select>
+            </label>
+            <input
+              type="number"
+              min={1}
+              placeholder="Min level"
+              value={filters.minLevel ?? ''}
+              onChange={(event) => updateFilters({ minLevel: event.target.value })}
+            />
+            <input
+              type="number"
+              min={1}
+              placeholder="Max level"
+              value={filters.maxLevel ?? ''}
+              onChange={(event) => updateFilters({ maxLevel: event.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="rounded border border-white/10 bg-ash-950/40">
+          <button
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-semibold uppercase tracking-[0.18em] text-zinc-400 transition hover:text-zinc-200"
+            type="button"
+            aria-expanded={showAdvancedFilters}
+            aria-controls="advanced-filters"
+            onClick={() => setShowAdvancedFilters((current) => !current)}
+          >
+            <span className="inline-flex items-center gap-2">
+              <SlidersHorizontal size={15} className="text-ember-500" /> Advanced filters
+            </span>
+            <ChevronDown
+              size={18}
+              className={'shrink-0 text-zinc-500 transition ' + (showAdvancedFilters ? 'rotate-180 text-ember-500' : '')}
+              aria-hidden="true"
+            />
+          </button>
+
+          {showAdvancedFilters ? (
+            <div id="advanced-filters" className="grid gap-4 border-t border-white/10 p-4 md:grid-cols-3 xl:grid-cols-6">
+              <ComingSoonFilter label="Weapon" />
+              <ComingSoonFilter label="Armor" />
+              <ComingSoonFilter label="Skills" />
+              <ComingSoonFilter label="Augments" />
+              <label className="space-y-2 text-sm text-zinc-300">
+                <span>Inclination</span>
+                <select value={filters.inclination ?? ''} onChange={(event) => updateFilters({ inclination: event.target.value })}>
+                  <option value="">All inclinations</option>
+                  {inclinations.map((inclination) => <option key={inclination}>{inclination}</option>)}
+                </select>
+              </label>
+              <label className="space-y-2 text-sm text-zinc-300">
+                <span>Specialization</span>
+                <select value={filters.specialization ?? ''} onChange={(event) => updateFilters({ specialization: event.target.value })}>
+                  <option value="">All specializations</option>
+                  {specializations.map((specialization) => <option key={specialization}>{specialization}</option>)}
+                </select>
+              </label>
+            </div>
+          ) : null}
+        </div>
       </section>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5 text-sm text-zinc-400">
