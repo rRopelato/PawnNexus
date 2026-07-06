@@ -12,6 +12,7 @@ import {
   getUserByLogin,
   getUserByUsername,
   isEmailBanned,
+  pawnStatsSelect,
   publicPawn,
   publicUser,
 } from './db';
@@ -238,7 +239,7 @@ app.get('/me', requireAuth, async (c) => {
 app.get('/me/pawns', requireAuth, async (c) => {
   const user = c.get('user');
   const result = await c.env.DB.prepare(
-    `SELECT pawns.*, users.username AS owner_username
+    `SELECT pawns.*, users.username AS owner_username, ${pawnStatsSelect}
      FROM pawns
      JOIN users ON users.id = pawns.user_id
      WHERE pawns.user_id = ?
@@ -309,7 +310,7 @@ app.get('/pawns', async (c) => {
   }
 
   const result = await c.env.DB.prepare(
-    `SELECT pawns.*, users.username AS owner_username
+    `SELECT pawns.*, users.username AS owner_username, ${pawnStatsSelect}
      FROM pawns
      JOIN users ON users.id = pawns.user_id
      WHERE ${conditions.join(' AND ')}
@@ -341,13 +342,80 @@ app.get('/pawns/:id', async (c) => {
   }
 
   const requester = await getOptionalUser(c);
+  const pawnWithViewer = requester ? await getPawnById(c.env.DB, pawn.id, requester.id) : pawn;
   const canManage = requester ? canManagePawn(requester, pawn) : false;
 
   if ((pawn.status !== 'approved' || !isPubliclyActive(pawn)) && !canManage) {
     throw new HTTPException(404, { message: 'Pawn not found' });
   }
 
-  return c.json({ pawn: publicPawn(pawn) });
+  return c.json({ pawn: publicPawn(pawnWithViewer ?? pawn) });
+});
+
+app.get('/me/favorites', requireAuth, async (c) => {
+  const user = c.get('user');
+  const result = await c.env.DB.prepare(
+    `SELECT pawns.*, users.username AS owner_username, ${pawnStatsSelect},
+            0 AS user_liked, 1 AS user_favorited
+     FROM pawn_favorites
+     JOIN pawns ON pawns.id = pawn_favorites.pawn_id
+     JOIN users ON users.id = pawns.user_id
+     WHERE pawn_favorites.user_id = ? AND pawns.status = 'approved'
+     ORDER BY pawn_favorites.created_at DESC`,
+  )
+    .bind(user.id)
+    .all<PawnRow>();
+
+  const pawns = (await decayPawns(c.env.DB, result.results)).filter(isPubliclyActive);
+  return c.json({ pawns: pawns.map(publicPawn) });
+});
+
+app.post('/pawns/:id/like', requireAuth, requireVerified, async (c) => {
+  const user = c.get('user');
+  const pawn = await getPawnById(c.env.DB, c.req.param('id'), user.id);
+  if (!pawn || pawn.status !== 'approved' || !isPubliclyActive(pawn)) {
+    throw new HTTPException(404, { message: 'Pawn not found' });
+  }
+
+  await c.env.DB.prepare('INSERT OR IGNORE INTO pawn_likes (pawn_id, user_id) VALUES (?, ?)').bind(pawn.id, user.id).run();
+  const updated = await getPawnById(c.env.DB, pawn.id, user.id);
+  if (!updated) throw new HTTPException(500, { message: 'Unable to like pawn' });
+  return c.json({ pawn: publicPawn(updated) });
+});
+
+app.delete('/pawns/:id/like', requireAuth, requireVerified, async (c) => {
+  const user = c.get('user');
+  const pawn = await getPawnById(c.env.DB, c.req.param('id'), user.id);
+  if (!pawn) throw new HTTPException(404, { message: 'Pawn not found' });
+
+  await c.env.DB.prepare('DELETE FROM pawn_likes WHERE pawn_id = ? AND user_id = ?').bind(pawn.id, user.id).run();
+  const updated = await getPawnById(c.env.DB, pawn.id, user.id);
+  if (!updated) throw new HTTPException(500, { message: 'Unable to unlike pawn' });
+  return c.json({ pawn: publicPawn(updated) });
+});
+
+app.post('/pawns/:id/favorite', requireAuth, requireVerified, async (c) => {
+  const user = c.get('user');
+  const pawn = await getPawnById(c.env.DB, c.req.param('id'), user.id);
+  if (!pawn || pawn.status !== 'approved' || !isPubliclyActive(pawn)) {
+    throw new HTTPException(404, { message: 'Pawn not found' });
+  }
+
+  await c.env.DB.prepare('INSERT OR IGNORE INTO pawn_favorites (pawn_id, user_id) VALUES (?, ?)').bind(pawn.id, user.id).run();
+  const updated = await getPawnById(c.env.DB, pawn.id, user.id);
+  if (!updated) throw new HTTPException(500, { message: 'Unable to favorite pawn' });
+  return c.json({ pawn: publicPawn(updated) });
+});
+
+app.delete('/pawns/:id/favorite', requireAuth, requireVerified, async (c) => {
+  const user = c.get('user');
+  const pawn = await getPawnById(c.env.DB, c.req.param('id'), user.id);
+  if (!pawn) throw new HTTPException(404, { message: 'Pawn not found' });
+
+  await c.env.DB.prepare('DELETE FROM pawn_favorites WHERE pawn_id = ? AND user_id = ?').bind(pawn.id, user.id).run();
+  const updated = await getPawnById(c.env.DB, pawn.id, user.id);
+  if (!updated) throw new HTTPException(500, { message: 'Unable to remove favorite' });
+  return c.json({ pawn: publicPawn(updated) });
 });
 
 app.post('/pawns', requireAuth, requireVerified, async (c) => {
@@ -498,6 +566,8 @@ app.delete('/pawns/:id', requireAuth, async (c) => {
   if (!pawn) throw new HTTPException(404, { message: 'Pawn not found' });
   if (!canManagePawn(user, pawn) && user.role !== 'moderator') throw new HTTPException(403, { message: 'Not allowed' });
 
+  await c.env.DB.prepare('DELETE FROM pawn_likes WHERE pawn_id = ?').bind(pawn.id).run();
+  await c.env.DB.prepare('DELETE FROM pawn_favorites WHERE pawn_id = ?').bind(pawn.id).run();
   await c.env.DB.prepare('DELETE FROM pawns WHERE id = ?').bind(pawn.id).run();
   return c.json({ ok: true });
 });
@@ -649,6 +719,8 @@ app.delete('/admin/users/:id', requireAuth, requireAdmin, async (c) => {
     throw new HTTPException(400, { message: 'Admins cannot delete their own account' });
   }
 
+  await c.env.DB.prepare('DELETE FROM pawn_likes WHERE user_id = ?').bind(id).run();
+  await c.env.DB.prepare('DELETE FROM pawn_favorites WHERE user_id = ?').bind(id).run();
   await c.env.DB.prepare('DELETE FROM pawns WHERE user_id = ?').bind(id).run();
   await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
   return c.json({ ok: true });
@@ -684,7 +756,7 @@ app.post('/admin/unban-email', requireAuth, requireAdmin, async (c) => {
 
 app.get('/admin/pending', requireAuth, requireModerator, async (c) => {
   const result = await c.env.DB.prepare(
-    `SELECT pawns.*, users.username AS owner_username
+    `SELECT pawns.*, users.username AS owner_username, ${pawnStatsSelect}
      FROM pawns
      JOIN users ON users.id = pawns.user_id
      WHERE pawns.status = ?

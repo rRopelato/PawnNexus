@@ -84,6 +84,10 @@ export type Pawn = {
   ownerUsername: string;
   createdAt: string;
   updatedAt: string;
+  likesCount: number;
+  favoritesCount: number;
+  userLiked: boolean;
+  userFavorited: boolean;
 };
 
 export type PawnSort = 'newest' | 'recently-refreshed' | 'random' | 'level-desc' | 'level-asc';

@@ -1,4 +1,4 @@
-import { Calendar, ChevronLeft, ChevronRight, Edit, MessageSquare, RefreshCw, Shield, Star, Trash2 } from 'lucide-react';
+import { Bookmark, Calendar, ChevronLeft, ChevronRight, Edit, Heart, MessageSquare, RefreshCw, Shield, Star, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../lib/api';
@@ -10,6 +10,7 @@ export function PawnDetails({ user }: { user: User | null }) {
   const [pawn, setPawn] = useState<Pawn | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [reactionBusy, setReactionBusy] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -23,6 +24,52 @@ export function PawnDetails({ user }: { user: User | null }) {
     if (!pawn) return;
     await api.deletePawn(pawn.id);
     navigate('/my-pawns');
+  }
+
+  async function toggleLike() {
+    if (!pawn) return;
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (!user.emailVerifiedAt) {
+      navigate('/verify-required');
+      return;
+    }
+
+    setReactionBusy(true);
+    setError('');
+    try {
+      const result = pawn.userLiked ? await api.unlikePawn(pawn.id) : await api.likePawn(pawn.id);
+      setPawn(result.pawn);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to update like');
+    } finally {
+      setReactionBusy(false);
+    }
+  }
+
+  async function toggleFavorite() {
+    if (!pawn) return;
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (!user.emailVerifiedAt) {
+      navigate('/verify-required');
+      return;
+    }
+
+    setReactionBusy(true);
+    setError('');
+    try {
+      const result = pawn.userFavorited ? await api.unfavoritePawn(pawn.id) : await api.favoritePawn(pawn.id);
+      setPawn(result.pawn);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to update favorite');
+    } finally {
+      setReactionBusy(false);
+    }
   }
 
   async function refresh() {
@@ -155,6 +202,18 @@ export function PawnDetails({ user }: { user: User | null }) {
             <dl className="grid gap-3 text-sm">
               <Info label={platformContact.label} value={platformContact.value} href={platformContact.href} />
             </dl>
+          </section>
+
+          <section className="space-y-3 border-t border-white/10 pt-5">
+            <h2 className="text-lg font-semibold text-white">Community</h2>
+            <div className="grid grid-cols-2 gap-2">
+              <button className="button-secondary justify-center" type="button" onClick={toggleLike} disabled={reactionBusy}>
+                <Heart size={16} className={pawn.userLiked ? 'fill-ember-500 text-ember-500' : ''} /> {pawn.likesCount}
+              </button>
+              <button className="button-secondary justify-center" type="button" onClick={toggleFavorite} disabled={reactionBusy}>
+                <Bookmark size={16} className={pawn.userFavorited ? 'fill-ember-500 text-ember-500' : ''} /> {pawn.favoritesCount}
+              </button>
+            </div>
           </section>
 
           <section className="space-y-2 border-t border-white/10 pt-5 text-sm text-zinc-400">

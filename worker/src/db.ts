@@ -13,6 +13,21 @@ export function publicUser(row: UserRow) {
   };
 }
 
+export const pawnStatsSelect = `
+  (SELECT COUNT(*) FROM pawn_likes WHERE pawn_likes.pawn_id = pawns.id) AS likes_count,
+  (SELECT COUNT(*) FROM pawn_favorites WHERE pawn_favorites.pawn_id = pawns.id) AS favorites_count
+`;
+
+export function pawnViewerStatsSelect(viewerId: string | null) {
+  if (!viewerId) {
+    return pawnStatsSelect + ', 0 AS user_liked, 0 AS user_favorited';
+  }
+
+  return pawnStatsSelect + `,
+  EXISTS(SELECT 1 FROM pawn_likes WHERE pawn_likes.pawn_id = pawns.id AND pawn_likes.user_id = ?) AS user_liked,
+  EXISTS(SELECT 1 FROM pawn_favorites WHERE pawn_favorites.pawn_id = pawns.id AND pawn_favorites.user_id = ?) AS user_favorited`;
+}
+
 export function publicPawn(row: PawnRow) {
   const images = parseImages(row.image_urls, row.image_url);
   const weaponSkills = parseSkills(row.skills).slice(0, 4);
@@ -60,6 +75,10 @@ export function publicPawn(row: PawnRow) {
     ownerUsername: row.owner_username,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    likesCount: Number(row.likes_count ?? 0),
+    favoritesCount: Number(row.favorites_count ?? 0),
+    userLiked: Boolean(row.user_liked),
+    userFavorited: Boolean(row.user_favorited),
   };
 }
 
@@ -91,15 +110,16 @@ export async function isEmailBanned(db: D1Database, email: string) {
   return Boolean(row);
 }
 
-export async function getPawnById(db: D1Database, id: string) {
+export async function getPawnById(db: D1Database, id: string, viewerId: string | null = null) {
+  const viewerValues = viewerId ? [viewerId, viewerId] : [];
   const pawn = await db
     .prepare(
-      `SELECT pawns.*, users.username AS owner_username
+      `SELECT pawns.*, users.username AS owner_username, ${pawnViewerStatsSelect(viewerId)}
        FROM pawns
        JOIN users ON users.id = pawns.user_id
        WHERE pawns.id = ?`,
     )
-    .bind(id)
+    .bind(...viewerValues, id)
     .first<PawnRow>();
 
   return pawn ? decayPawnActivity(db, pawn) : null;

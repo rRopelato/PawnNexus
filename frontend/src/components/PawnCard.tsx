@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { BadgeCheck, Clock, Gamepad2, Star, UserRound } from 'lucide-react';
+import { BadgeCheck, Clock, Gamepad2, Heart, Star, UserRound } from 'lucide-react';
 import type { Pawn } from '../types';
 
 export function PawnCard({ pawn }: { pawn: Pawn }) {
@@ -69,6 +69,9 @@ export function PawnCard({ pawn }: { pawn: Pawn }) {
           <span className="tag">{pawn.gender}</span>
           <span className="tag">{pawn.race}</span>
           {pawn.specialization ? <span className="tag">{pawn.specialization}</span> : null}
+          <span className="tag gap-1" title="Likes">
+            <Heart size={12} className={pawn.userLiked ? 'fill-ember-500 text-ember-500' : 'text-ember-500'} /> {pawn.likesCount}
+          </span>
           <span className="tag gap-1" title="Activity stars">
             <Star size={12} className="text-ember-500" /> {pawn.activityStars}/3
           </span>

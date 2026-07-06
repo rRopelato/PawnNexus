@@ -7,6 +7,7 @@ import { Auth } from './pages/Auth';
 import { Faq } from './pages/Faq';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { Home } from './pages/Home';
+import { MyFavorites } from './pages/MyFavorites';
 import { MyPawns } from './pages/MyPawns';
 import { NotFound } from './pages/NotFound';
 import { PawnDetails } from './pages/PawnDetails';
@@ -66,6 +67,7 @@ export function App() {
           element={user ? (user.emailVerifiedAt ? <PawnEditor mode="edit" /> : <Navigate to="/verify-required" replace />) : <Navigate to="/login" replace />}
         />
         <Route path="my-pawns" element={user ? <MyPawns /> : <Navigate to="/login" replace />} />
+        <Route path="my-favorites" element={user ? <MyFavorites /> : <Navigate to="/login" replace />} />
         <Route
           path="admin"
           element={user && user.emailVerifiedAt && (user.role === 'admin' || user.role === 'moderator') ? <Admin currentUser={user} /> : <Navigate to={user ? '/verify-required' : '/'} replace />}

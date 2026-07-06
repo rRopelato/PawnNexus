@@ -91,4 +91,8 @@ export type PawnRow = {
   owner_username: string;
   created_at: string;
   updated_at: string;
+  likes_count?: number;
+  favorites_count?: number;
+  user_liked?: number | boolean;
+  user_favorited?: number | boolean;
 };

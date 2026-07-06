@@ -103,6 +103,9 @@ export const api = {
   async myPawns() {
     return request<{ pawns: Pawn[] }>('/me/pawns', { auth: true });
   },
+  async myFavorites() {
+    return request<{ pawns: Pawn[] }>('/me/favorites', { auth: true });
+  },
   async createPawn(payload: Partial<Pawn>) {
     return request<{ pawn: Pawn }>('/pawns', {
       method: 'POST',
@@ -120,6 +123,30 @@ export const api = {
   async refreshPawn(id: string) {
     return request<{ pawn: Pawn }>(`/pawns/${id}/refresh`, {
       method: 'POST',
+      auth: true,
+    });
+  },
+  async likePawn(id: string) {
+    return request<{ pawn: Pawn }>(`/pawns/${id}/like`, {
+      method: 'POST',
+      auth: true,
+    });
+  },
+  async unlikePawn(id: string) {
+    return request<{ pawn: Pawn }>(`/pawns/${id}/like`, {
+      method: 'DELETE',
+      auth: true,
+    });
+  },
+  async favoritePawn(id: string) {
+    return request<{ pawn: Pawn }>(`/pawns/${id}/favorite`, {
+      method: 'POST',
+      auth: true,
+    });
+  },
+  async unfavoritePawn(id: string) {
+    return request<{ pawn: Pawn }>(`/pawns/${id}/favorite`, {
+      method: 'DELETE',
       auth: true,
     });
   },
