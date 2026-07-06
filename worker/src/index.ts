@@ -749,6 +749,10 @@ app.get('/admin/stats', requireAuth, requireAdmin, async (c) => {
   const activeAccounts = await c.env.DB.prepare("SELECT COUNT(*) AS count FROM users WHERE status = 'active'").first<{ count: number }>();
   const pendingPawns = await c.env.DB.prepare("SELECT COUNT(*) AS count FROM pawns WHERE status = 'pending'").first<{ count: number }>();
   const approvedPawns = await c.env.DB.prepare("SELECT COUNT(*) AS count FROM pawns WHERE status = 'approved'").first<{ count: number }>();
+  const rejectedPawns = await c.env.DB.prepare("SELECT COUNT(*) AS count FROM pawns WHERE status = 'rejected'").first<{ count: number }>();
+  const inactivePawns = await c.env.DB.prepare("SELECT COUNT(*) AS count FROM pawns WHERE activity_stars <= 1").first<{ count: number }>();
+  const moderators = await c.env.DB.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'moderator'").first<{ count: number }>();
+  const admins = await c.env.DB.prepare("SELECT COUNT(*) AS count FROM users WHERE role = 'admin'").first<{ count: number }>();
   const bannedEmails = await c.env.DB.prepare('SELECT COUNT(*) AS count FROM banned_emails').first<{ count: number }>();
 
   return c.json({
@@ -757,6 +761,10 @@ app.get('/admin/stats', requireAuth, requireAdmin, async (c) => {
       activeAccounts: activeAccounts?.count ?? 0,
       pendingPawns: pendingPawns?.count ?? 0,
       approvedPawns: approvedPawns?.count ?? 0,
+      rejectedPawns: rejectedPawns?.count ?? 0,
+      inactivePawns: inactivePawns?.count ?? 0,
+      moderators: moderators?.count ?? 0,
+      admins: admins?.count ?? 0,
       bannedEmails: bannedEmails?.count ?? 0,
     },
   });
@@ -864,6 +872,54 @@ app.post('/admin/unban-email', requireAuth, requireAdmin, async (c) => {
   await c.env.DB.prepare("UPDATE users SET status = 'active' WHERE lower(email) = lower(?)").bind(email).run();
 
   return c.json({ ok: true });
+});
+
+app.get('/admin/pawns', requireAuth, requireModerator, async (c) => {
+  const status = c.req.query('status') ?? 'pending';
+  if (status !== 'pending' && status !== 'approved' && status !== 'rejected') {
+    throw new HTTPException(400, { message: 'status is invalid' });
+  }
+
+  const search = c.req.query('search')?.trim();
+  const page = Math.max(1, Number(c.req.query('page') ?? 1));
+  const pageSize = Math.min(50, Math.max(5, Number(c.req.query('pageSize') ?? 12)));
+  const offset = (page - 1) * pageSize;
+  const conditions = ['pawns.status = ?'];
+  const values: (string | number)[] = [status];
+
+  if (search) {
+    conditions.push('(pawns.pawn_name LIKE ? OR pawns.arisen_name LIKE ? OR pawns.pawn_id LIKE ? OR users.username LIKE ?)');
+    values.push('%' + search + '%', '%' + search + '%', '%' + search + '%', '%' + search + '%');
+  }
+
+  const where = 'WHERE ' + conditions.join(' AND ');
+  const count = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS count
+     FROM pawns
+     JOIN users ON users.id = pawns.user_id
+     ${where}`,
+  )
+    .bind(...values)
+    .first<{ count: number }>();
+
+  const result = await c.env.DB.prepare(
+    `SELECT pawns.*, users.username AS owner_username, ${pawnStatsSelect}
+     FROM pawns
+     JOIN users ON users.id = pawns.user_id
+     ${where}
+     ORDER BY pawns.created_at DESC
+     LIMIT ? OFFSET ?`,
+  )
+    .bind(...values, pageSize, offset)
+    .all<PawnRow>();
+
+  const pawns = await decayPawns(c.env.DB, result.results);
+  return c.json({
+    pawns: pawns.map(publicPawn),
+    page,
+    pageSize,
+    total: count?.count ?? 0,
+  });
 });
 
 app.get('/admin/pending', requireAuth, requireModerator, async (c) => {

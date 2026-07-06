@@ -1,4 +1,4 @@
-import type { AdminStats, AdminUsersResult, BannedEmail, Pawn, PawnComment, PawnFilters, PawnImage, PublicUserProfile, User } from '../types';
+import type { AdminPawnsResult, AdminStats, AdminUsersResult, BannedEmail, Pawn, PawnComment, PawnFilters, PawnImage, PublicUserProfile, User } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
 const TOKEN_KEY = 'pawnnexus.token';
@@ -230,6 +230,15 @@ export const api = {
       body: JSON.stringify({ email }),
       auth: true,
     });
+  },
+  async adminPawns(options: { status?: Pawn['status']; page?: number; pageSize?: number; search?: string } = {}) {
+    const search = new URLSearchParams();
+    if (options.status) search.set('status', options.status);
+    if (options.page) search.set('page', String(options.page));
+    if (options.pageSize) search.set('pageSize', String(options.pageSize));
+    if (options.search) search.set('search', options.search);
+    const suffix = search.toString() ? `?${search.toString()}` : '';
+    return request<AdminPawnsResult>(`/admin/pawns${suffix}`, { auth: true });
   },
   async pendingPawns() {
     return request<{ pawns: Pawn[] }>('/admin/pending', { auth: true });

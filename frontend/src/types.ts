@@ -35,6 +35,10 @@ export type AdminStats = {
   activeAccounts: number;
   pendingPawns: number;
   approvedPawns: number;
+  rejectedPawns: number;
+  inactivePawns: number;
+  moderators: number;
+  admins: number;
   bannedEmails: number;
 };
 
@@ -125,6 +129,13 @@ export type PawnFilters = {
 
 export type AdminUsersResult = {
   users: User[];
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
+export type AdminPawnsResult = {
+  pawns: Pawn[];
   page: number;
   pageSize: number;
   total: number;
