@@ -18,7 +18,7 @@ import {
 } from './db';
 import { sendPasswordResetEmail, sendVerificationEmail } from './email';
 import { requireAdmin, requireAuth, requireModerator, requireVerified } from './middleware';
-import type { BannedEmailRow, Env, PawnRow, UserRow, Variables } from './types';
+import type { BannedEmailRow, CommentRow, Env, PawnRow, UserRow, Variables } from './types';
 import {
   requireString,
   validateEmail,
@@ -352,6 +352,68 @@ app.get('/pawns/:id', async (c) => {
   return c.json({ pawn: publicPawn(pawnWithViewer ?? pawn) });
 });
 
+
+app.get('/pawns/:id/comments', async (c) => {
+  const pawn = await getPawnById(c.env.DB, c.req.param('id'));
+  if (!pawn) throw new HTTPException(404, { message: 'Pawn not found' });
+
+  const requester = await getOptionalUser(c);
+  const canManage = requester ? canManagePawn(requester, pawn) : false;
+  if ((pawn.status !== 'approved' || !isPubliclyActive(pawn)) && !canManage) {
+    throw new HTTPException(404, { message: 'Pawn not found' });
+  }
+
+  const result = await c.env.DB.prepare(
+    `SELECT pawn_comments.*, users.username AS username
+     FROM pawn_comments
+     JOIN users ON users.id = pawn_comments.user_id
+     WHERE pawn_comments.pawn_id = ?
+     ORDER BY pawn_comments.created_at ASC
+     LIMIT 200`,
+  )
+    .bind(pawn.id)
+    .all<CommentRow>();
+
+  return c.json({ comments: result.results.map(publicComment) });
+});
+
+app.post('/pawns/:id/comments', requireAuth, requireVerified, async (c) => {
+  const user = c.get('user');
+  const pawn = await getPawnById(c.env.DB, c.req.param('id'));
+  if (!pawn || pawn.status !== 'approved' || !isPubliclyActive(pawn)) {
+    throw new HTTPException(404, { message: 'Pawn not found' });
+  }
+
+  const body = await c.req.json<Record<string, unknown>>();
+  const text = requireString(body.body, 'comment', 1000);
+  const id = crypto.randomUUID();
+
+  await c.env.DB.prepare('INSERT INTO pawn_comments (id, pawn_id, user_id, body) VALUES (?, ?, ?, ?)')
+    .bind(id, pawn.id, user.id, text)
+    .run();
+
+  const comment = await getCommentById(c.env.DB, id);
+  if (!comment) throw new HTTPException(500, { message: 'Unable to create comment' });
+  return c.json({ comment: publicComment(comment) }, 201);
+});
+
+app.delete('/pawns/:pawnId/comments/:commentId', requireAuth, async (c) => {
+  const user = c.get('user');
+  if (!user.emailVerifiedAt) throw new HTTPException(403, { message: 'Email verification required' });
+
+  const pawn = await getPawnById(c.env.DB, c.req.param('pawnId'));
+  if (!pawn) throw new HTTPException(404, { message: 'Pawn not found' });
+
+  const comment = await getCommentById(c.env.DB, c.req.param('commentId'));
+  if (!comment || comment.pawn_id !== pawn.id) throw new HTTPException(404, { message: 'Comment not found' });
+
+  const canDelete = user.role === 'admin' || user.role === 'moderator' || user.id === pawn.user_id || user.id === comment.user_id;
+  if (!canDelete) throw new HTTPException(403, { message: 'Not allowed' });
+
+  await c.env.DB.prepare('DELETE FROM pawn_comments WHERE id = ?').bind(comment.id).run();
+  return c.json({ ok: true });
+});
+
 app.get('/me/favorites', requireAuth, async (c) => {
   const user = c.get('user');
   const result = await c.env.DB.prepare(
@@ -566,6 +628,7 @@ app.delete('/pawns/:id', requireAuth, async (c) => {
   if (!pawn) throw new HTTPException(404, { message: 'Pawn not found' });
   if (!canManagePawn(user, pawn) && user.role !== 'moderator') throw new HTTPException(403, { message: 'Not allowed' });
 
+  await c.env.DB.prepare('DELETE FROM pawn_comments WHERE pawn_id = ?').bind(pawn.id).run();
   await c.env.DB.prepare('DELETE FROM pawn_likes WHERE pawn_id = ?').bind(pawn.id).run();
   await c.env.DB.prepare('DELETE FROM pawn_favorites WHERE pawn_id = ?').bind(pawn.id).run();
   await c.env.DB.prepare('DELETE FROM pawns WHERE id = ?').bind(pawn.id).run();
@@ -719,8 +782,12 @@ app.delete('/admin/users/:id', requireAuth, requireAdmin, async (c) => {
     throw new HTTPException(400, { message: 'Admins cannot delete their own account' });
   }
 
+  await c.env.DB.prepare('DELETE FROM pawn_comments WHERE user_id = ?').bind(id).run();
+  await c.env.DB.prepare('DELETE FROM pawn_comments WHERE pawn_id IN (SELECT id FROM pawns WHERE user_id = ?)').bind(id).run();
   await c.env.DB.prepare('DELETE FROM pawn_likes WHERE user_id = ?').bind(id).run();
+  await c.env.DB.prepare('DELETE FROM pawn_likes WHERE pawn_id IN (SELECT id FROM pawns WHERE user_id = ?)').bind(id).run();
   await c.env.DB.prepare('DELETE FROM pawn_favorites WHERE user_id = ?').bind(id).run();
+  await c.env.DB.prepare('DELETE FROM pawn_favorites WHERE pawn_id IN (SELECT id FROM pawns WHERE user_id = ?)').bind(id).run();
   await c.env.DB.prepare('DELETE FROM pawns WHERE user_id = ?').bind(id).run();
   await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
   return c.json({ ok: true });
@@ -778,6 +845,29 @@ app.post('/admin/reject/:id', requireAuth, requireModerator, async (c) => {
   const pawn = await updatePawnStatus(c.env.DB, c.req.param('id'), 'rejected');
   return c.json({ pawn: publicPawn(pawn) });
 });
+
+
+function publicComment(row: CommentRow) {
+  return {
+    id: row.id,
+    pawnId: row.pawn_id,
+    userId: row.user_id,
+    username: row.username,
+    body: row.body,
+    createdAt: row.created_at,
+  };
+}
+
+async function getCommentById(db: D1Database, id: string) {
+  return db.prepare(
+    `SELECT pawn_comments.*, users.username AS username
+     FROM pawn_comments
+     JOIN users ON users.id = pawn_comments.user_id
+     WHERE pawn_comments.id = ?`,
+  )
+    .bind(id)
+    .first<CommentRow>();
+}
 
 function publicImageUrl(requestUrl: string, configuredBaseUrl: string, key: string) {
   if (configuredBaseUrl && !configuredBaseUrl.includes("example.com")) {

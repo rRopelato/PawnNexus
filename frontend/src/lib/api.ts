@@ -1,4 +1,4 @@
-import type { AdminStats, AdminUsersResult, BannedEmail, Pawn, PawnFilters, PawnImage, User } from '../types';
+import type { AdminStats, AdminUsersResult, BannedEmail, Pawn, PawnComment, PawnFilters, PawnImage, User } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
 const TOKEN_KEY = 'pawnnexus.token';
@@ -99,6 +99,22 @@ export const api = {
   },
   async pawn(id: string) {
     return request<{ pawn: Pawn }>(`/pawns/${id}`, { auth: true });
+  },
+  async pawnComments(id: string) {
+    return request<{ comments: PawnComment[] }>(`/pawns/${id}/comments`, { auth: true });
+  },
+  async createPawnComment(id: string, body: string) {
+    return request<{ comment: PawnComment }>(`/pawns/${id}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+      auth: true,
+    });
+  },
+  async deletePawnComment(pawnId: string, commentId: string) {
+    return request<{ ok: true }>(`/pawns/${pawnId}/comments/${commentId}`, {
+      method: 'DELETE',
+      auth: true,
+    });
   },
   async myPawns() {
     return request<{ pawns: Pawn[] }>('/me/pawns', { auth: true });

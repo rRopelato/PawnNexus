@@ -1,8 +1,9 @@
-import { Bookmark, Calendar, ChevronLeft, ChevronRight, Edit, Heart, MessageSquare, RefreshCw, Shield, Star, Trash2 } from 'lucide-react';
+import { Bookmark, Calendar, ChevronLeft, ChevronRight, Edit, Heart, MessageSquare, RefreshCw, Send, Shield, Star, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../lib/api';
-import type { Pawn, PawnImage, User } from '../types';
+import type { Pawn, PawnComment, PawnImage, User } from '../types';
 
 export function PawnDetails({ user }: { user: User | null }) {
   const { id } = useParams();
@@ -11,12 +12,24 @@ export function PawnDetails({ user }: { user: User | null }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [reactionBusy, setReactionBusy] = useState(false);
+  const [comments, setComments] = useState<PawnComment[]>([]);
+  const [commentBody, setCommentBody] = useState('');
+  const [commentError, setCommentError] = useState('');
+  const [commentBusy, setCommentBusy] = useState(false);
 
   useEffect(() => {
     if (!id) return;
+
     api
       .pawn(id)
-      .then((result) => setPawn(result.pawn))
+      .then((result) => {
+        setPawn(result.pawn);
+        return api.pawnComments(result.pawn.id);
+      })
+      .then((result) => {
+        setComments(result.comments);
+        setCommentError('');
+      })
       .catch((err) => setError(err instanceof Error ? err.message : 'Unable to load pawn'));
   }, [id]);
 
@@ -69,6 +82,46 @@ export function PawnDetails({ user }: { user: User | null }) {
       setError(err instanceof Error ? err.message : 'Unable to update favorite');
     } finally {
       setReactionBusy(false);
+    }
+  }
+
+  async function submitComment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!pawn) return;
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (!user.emailVerifiedAt) {
+      navigate('/verify-required');
+      return;
+    }
+
+    setCommentBusy(true);
+    setCommentError('');
+    try {
+      const result = await api.createPawnComment(pawn.id, commentBody);
+      setComments((current) => [...current, result.comment]);
+      setCommentBody('');
+    } catch (err) {
+      setCommentError(err instanceof Error ? err.message : 'Unable to post comment');
+    } finally {
+      setCommentBusy(false);
+    }
+  }
+
+  async function deleteComment(comment: PawnComment) {
+    if (!pawn) return;
+
+    setCommentBusy(true);
+    setCommentError('');
+    try {
+      await api.deletePawnComment(pawn.id, comment.id);
+      setComments((current) => current.filter((item) => item.id !== comment.id));
+    } catch (err) {
+      setCommentError(err instanceof Error ? err.message : 'Unable to delete comment');
+    } finally {
+      setCommentBusy(false);
     }
   }
 
@@ -171,12 +224,17 @@ export function PawnDetails({ user }: { user: User | null }) {
           </ProfileSection>
 
           <ProfileSection title="Comments">
-            <div className="rounded border border-dashed border-white/10 bg-ash-950/40 p-5 text-sm text-zinc-400">
-              <p className="flex items-center gap-2 font-medium text-zinc-200">
-                <MessageSquare size={16} className="text-ember-500" /> Comments are coming soon.
-              </p>
-              <p className="mt-2">This section is reserved for verified-user comments in a future update.</p>
-            </div>
+            <CommentsPanel
+              comments={comments}
+              body={commentBody}
+              error={commentError}
+              busy={commentBusy}
+              pawn={pawn}
+              user={user}
+              onBodyChange={setCommentBody}
+              onSubmit={submitComment}
+              onDelete={deleteComment}
+            />
           </ProfileSection>
         </div>
 
@@ -317,7 +375,7 @@ function ImageCarousel({ images, pawnName }: { images: PawnImage[]; pawnName: st
   );
 }
 
-function ProfileSection({ title, children }: { title: string; children: React.ReactNode }) {
+function ProfileSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-4">
       <h2 className="text-xl font-semibold text-white">{title}</h2>
@@ -351,6 +409,91 @@ function ValueChips({ values, emptyLabel }: { values: string[]; emptyLabel: stri
   return (
     <div className="flex flex-wrap gap-2">
       {filled.map((value) => <span key={value} className="tag">{value}</span>)}
+    </div>
+  );
+}
+
+function CommentsPanel({
+  comments,
+  body,
+  error,
+  busy,
+  pawn,
+  user,
+  onBodyChange,
+  onSubmit,
+  onDelete,
+}: {
+  comments: PawnComment[];
+  body: string;
+  error: string;
+  busy: boolean;
+  pawn: Pawn;
+  user: User | null;
+  onBodyChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onDelete: (comment: PawnComment) => void;
+}) {
+  const canComment = Boolean(user?.emailVerifiedAt);
+
+  return (
+    <div className="space-y-4">
+      {user ? (
+        canComment ? (
+          <form className="space-y-3" onSubmit={onSubmit}>
+            <textarea
+              className="min-h-28"
+              maxLength={1000}
+              placeholder="Write a comment"
+              value={body}
+              onChange={(event) => onBodyChange(event.target.value)}
+            />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-xs text-zinc-500">{body.trim().length}/1000</span>
+              <button className="button-primary" type="submit" disabled={busy || body.trim().length === 0}>
+                <Send size={16} /> Comment
+              </button>
+            </div>
+          </form>
+        ) : (
+          <p className="rounded border border-white/10 bg-ash-900 p-4 text-sm text-zinc-400">Verify your email to comment.</p>
+        )
+      ) : (
+        <p className="rounded border border-white/10 bg-ash-900 p-4 text-sm text-zinc-400">Log in with a verified account to comment.</p>
+      )}
+
+      {error ? <p className="alert">{error}</p> : null}
+
+      <div className="space-y-3">
+        {comments.length === 0 ? (
+          <div className="rounded border border-dashed border-white/10 bg-ash-950/40 p-5 text-sm text-zinc-400">
+            <p className="flex items-center gap-2 font-medium text-zinc-200">
+              <MessageSquare size={16} className="text-ember-500" /> No comments yet.
+            </p>
+            <p className="mt-2">Be the first verified user to leave a note about this Pawn.</p>
+          </div>
+        ) : null}
+
+        {comments.map((comment) => {
+          const canDelete = Boolean(user && (user.role === 'admin' || user.role === 'moderator' || user.id === pawn.userId || user.id === comment.userId));
+          return (
+            <article key={comment.id} className="rounded border border-white/10 bg-ash-900 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-white">{comment.username}</p>
+                  <p className="text-xs text-zinc-500">{new Date(comment.createdAt).toLocaleDateString()}</p>
+                </div>
+                {canDelete ? (
+                  <button className="icon-button" type="button" onClick={() => onDelete(comment)} disabled={busy} aria-label="Delete comment" title="Delete comment">
+                    <Trash2 size={15} />
+                  </button>
+                ) : null}
+              </div>
+              <p className="mt-3 whitespace-pre-line break-words text-sm leading-6 text-zinc-300">{comment.body}</p>
+            </article>
+          );
+        })}
+      </div>
     </div>
   );
 }

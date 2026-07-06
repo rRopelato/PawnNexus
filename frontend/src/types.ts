@@ -41,6 +41,15 @@ export type PawnImage = {
   sortOrder: number;
 };
 
+export type PawnComment = {
+  id: string;
+  pawnId: string;
+  userId: string;
+  username: string;
+  body: string;
+  createdAt: string;
+};
+
 export type Pawn = {
   id: string;
   userId: string;
