@@ -50,7 +50,7 @@ export function Layout({ user, onLogout }: Props) {
             {user ? (
               <>
                 <Link
-                  to="/profile"
+                  to={"/users/" + encodeURIComponent(user.username)}
                   className="hidden items-center gap-2 rounded border border-white/10 px-3 py-2 text-sm text-zinc-300 transition hover:border-ember-500/40 hover:text-white sm:flex"
                 >
                   {user.role === 'admin' || user.role === 'moderator' ? <Shield size={16} /> : <UserRound size={16} />}
@@ -91,7 +91,7 @@ export function Layout({ user, onLogout }: Props) {
               {user ? <MobileNavItem to="/my-favorites" onClick={closeMobileMenu}>Favorites</MobileNavItem> : null}
               <MobileNavItem to="/faq" onClick={closeMobileMenu}>FAQ</MobileNavItem>
               <MobileNavItem to="/support" onClick={closeMobileMenu}>Support</MobileNavItem>
-              {user ? <MobileNavItem to="/profile" onClick={closeMobileMenu}>Profile</MobileNavItem> : null}
+              {user ? <MobileNavItem to={"/users/" + encodeURIComponent(user.username)} onClick={closeMobileMenu}>Profile</MobileNavItem> : null}
               {user && user.emailVerifiedAt && (user.role === 'admin' || user.role === 'moderator') ? <MobileNavItem to="/admin" onClick={closeMobileMenu}>Admin</MobileNavItem> : null}
               {!user ? (
                 <div className="grid grid-cols-2 gap-2 pt-2">

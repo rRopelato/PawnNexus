@@ -21,6 +21,15 @@ export type User = {
   createdAt: string;
 };
 
+export type PublicUserProfile = {
+  username: string;
+  role: User['role'];
+  createdAt: string;
+  totalLikes: number;
+  totalFavorites: number;
+  approvedPawns: number;
+};
+
 export type AdminStats = {
   accounts: number;
   activeAccounts: number;

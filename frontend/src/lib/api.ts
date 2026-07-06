@@ -1,4 +1,4 @@
-import type { AdminStats, AdminUsersResult, BannedEmail, Pawn, PawnComment, PawnFilters, PawnImage, User } from '../types';
+import type { AdminStats, AdminUsersResult, BannedEmail, Pawn, PawnComment, PawnFilters, PawnImage, PublicUserProfile, User } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
 const TOKEN_KEY = 'pawnnexus.token';
@@ -118,6 +118,9 @@ export const api = {
   },
   async myPawns() {
     return request<{ pawns: Pawn[] }>('/me/pawns', { auth: true });
+  },
+  async userProfile(username: string) {
+    return request<{ profile: PublicUserProfile; pawns: Pawn[] }>(`/users/${encodeURIComponent(username)}`);
   },
   async myFavorites() {
     return request<{ pawns: Pawn[] }>('/me/favorites', { auth: true });

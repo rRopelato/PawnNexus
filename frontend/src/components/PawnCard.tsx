@@ -3,7 +3,7 @@ import { BadgeCheck, Clock, Gamepad2, Heart, Star, UserRound } from 'lucide-reac
 import type { Pawn } from '../types';
 
 export function PawnCard({ pawn }: { pawn: Pawn }) {
-  const ownerSearchUrl = '/?search=' + encodeURIComponent(pawn.ownerUsername);
+  const ownerProfileUrl = '/users/' + encodeURIComponent(pawn.ownerUsername);
 
   return (
     <article className="group relative cursor-pointer overflow-hidden rounded border border-white/10 bg-ash-900 transition duration-200 hover:-translate-y-0.5 hover:border-ember-500/50 hover:shadow-glow">
@@ -42,12 +42,21 @@ export function PawnCard({ pawn }: { pawn: Pawn }) {
         </div>
       </div>
 
-      <div className="pointer-events-none relative z-0 space-y-4 p-4">
+      <div className="pointer-events-none relative z-20 space-y-4 p-4">
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="truncate text-lg font-semibold text-white transition group-hover:text-ember-500">{pawn.pawnName}</h2>
-              <p className="truncate text-sm text-zinc-400">Arisen: {pawn.arisenName}</p>
+              <p className="truncate text-sm text-zinc-400">
+                Arisen:{' '}
+                <Link
+                  to={ownerProfileUrl}
+                  className="pointer-events-auto relative z-30 transition hover:text-ember-500"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {pawn.arisenName}
+                </Link>
+              </p>
             </div>
             <span className="shrink-0 rounded border border-ember-500/30 bg-ember-500/10 px-2 py-1 text-sm font-semibold text-ember-500">
               Lv. {pawn.level}
@@ -55,8 +64,8 @@ export function PawnCard({ pawn }: { pawn: Pawn }) {
           </div>
 
           <Link
-            to={ownerSearchUrl}
-            className="pointer-events-auto relative z-20 inline-flex max-w-full items-center gap-1.5 text-sm text-zinc-400 transition hover:text-ember-500"
+            to={ownerProfileUrl}
+            className="pointer-events-auto relative z-30 inline-flex max-w-full items-center gap-1.5 text-sm text-zinc-400 transition hover:text-ember-500"
             onClick={(event) => event.stopPropagation()}
           >
             <UserRound size={14} />

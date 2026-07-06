@@ -14,6 +14,7 @@ import { PawnDetails } from './pages/PawnDetails';
 import { PawnEditor } from './pages/PawnEditor';
 import { Profile } from './pages/Profile';
 import { Support } from './pages/Support';
+import { UserProfile } from './pages/UserProfile';
 import { ResetPassword } from './pages/ResetPassword';
 import { VerifyEmail } from './pages/VerifyEmail';
 import { VerifyRequired } from './pages/VerifyRequired';
@@ -55,6 +56,7 @@ export function App() {
         />
         <Route path="pawns/:id" element={<PawnDetails user={user} />} />
         <Route path="profile" element={<Profile user={user} />} />
+        <Route path="users/:username" element={<UserProfile />} />
         <Route path="faq" element={<Faq />} />
         <Route path="support" element={<Support />} />
         <Route path="create" element={<Navigate to="/add-pawn" replace />} />

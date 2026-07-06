@@ -145,6 +145,7 @@ export function PawnDetails({ user }: { user: User | null }) {
 
   const canEdit = user && (user.id === pawn.userId || user.role === 'admin');
   const platformContact = getPlatformContact(pawn);
+  const ownerProfileUrl = '/users/' + encodeURIComponent(pawn.ownerUsername);
   const weaponSkills = pawn.weaponSkills?.length ? pawn.weaponSkills : pawn.skills;
   const weapons: Array<[string, string | null]> = [
     ['Weapon 1', pawn.weapon1],
@@ -174,7 +175,12 @@ export function PawnDetails({ user }: { user: User | null }) {
           <div className="space-y-2">
             <p className="text-sm uppercase tracking-[0.2em] text-ember-500">Pawn profile</p>
             <h1 className="text-4xl font-semibold text-white md:text-6xl">{pawn.pawnName}</h1>
-            <p className="text-lg text-zinc-300">Arisen by {pawn.arisenName}</p>
+            <p className="text-lg text-zinc-300">
+              Arisen Name -{' '}
+              <Link className="text-ember-500 hover:text-ember-600" to={ownerProfileUrl}>
+                {pawn.arisenName}
+              </Link>
+            </p>
           </div>
           <div className="flex flex-wrap gap-2 text-sm">
             <span className="tag">{pawn.vocation}</span>
@@ -244,7 +250,7 @@ export function PawnDetails({ user }: { user: User | null }) {
               <Shield size={18} className="text-ember-500" /> Pawn info
             </h2>
             <dl className="grid grid-cols-2 gap-4 text-sm">
-              <Info label="Owner" value={pawn.ownerUsername} />
+              <Info label="Owner" value={pawn.ownerUsername} to={ownerProfileUrl} />
               <Info label="Pawn ID" value={pawn.pawnId} />
               <Info label="Platform" value={pawn.platform} />
               <Info label="Vocation" value={pawn.vocation} />
@@ -498,12 +504,16 @@ function CommentsPanel({
   );
 }
 
-function Info({ label, value, href }: { label: string; value: string; href?: string }) {
+function Info({ label, value, href, to }: { label: string; value: string; href?: string; to?: string }) {
   return (
     <div>
       <dt className="text-zinc-500">{label}</dt>
       <dd className="break-words font-medium text-zinc-100">
-        {href ? (
+        {to ? (
+          <Link className="text-ember-500 hover:text-ember-600" to={to}>
+            {value}
+          </Link>
+        ) : href ? (
           <a className="text-ember-500 hover:text-ember-600" href={href} target="_blank" rel="noreferrer">
             {value}
           </a>

@@ -432,6 +432,51 @@ app.get('/me/favorites', requireAuth, async (c) => {
   return c.json({ pawns: pawns.map(publicPawn) });
 });
 
+
+app.get('/users/:username', async (c) => {
+  const username = requireString(c.req.param('username'), 'username', 24);
+  const user = await getUserByUsername(c.env.DB, username);
+  if (!user || user.status !== 'active') {
+    throw new HTTPException(404, { message: 'User not found' });
+  }
+
+  const stats = await c.env.DB.prepare(
+    `SELECT
+       COUNT(DISTINCT pawns.id) AS approved_pawns,
+       COUNT(DISTINCT pawn_likes.user_id || ':' || pawn_likes.pawn_id) AS total_likes,
+       COUNT(DISTINCT pawn_favorites.user_id || ':' || pawn_favorites.pawn_id) AS total_favorites
+     FROM pawns
+     LEFT JOIN pawn_likes ON pawn_likes.pawn_id = pawns.id
+     LEFT JOIN pawn_favorites ON pawn_favorites.pawn_id = pawns.id
+     WHERE pawns.user_id = ? AND pawns.status = 'approved'`,
+  )
+    .bind(user.id)
+    .first<{ approved_pawns: number; total_likes: number; total_favorites: number }>();
+
+  const result = await c.env.DB.prepare(
+    `SELECT pawns.*, users.username AS owner_username, ${pawnStatsSelect}
+     FROM pawns
+     JOIN users ON users.id = pawns.user_id
+     WHERE pawns.user_id = ? AND pawns.status = 'approved'
+     ORDER BY pawns.created_at DESC`,
+  )
+    .bind(user.id)
+    .all<PawnRow>();
+
+  const pawns = await decayPawns(c.env.DB, result.results);
+  return c.json({
+    profile: {
+      username: user.username,
+      role: user.role,
+      createdAt: user.created_at,
+      totalLikes: Number(stats?.total_likes ?? 0),
+      totalFavorites: Number(stats?.total_favorites ?? 0),
+      approvedPawns: Number(stats?.approved_pawns ?? 0),
+    },
+    pawns: pawns.map(publicPawn),
+  });
+});
+
 app.post('/pawns/:id/like', requireAuth, requireVerified, async (c) => {
   const user = c.get('user');
   const pawn = await getPawnById(c.env.DB, c.req.param('id'), user.id);
