@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../lib/api';
+import { formatDate, relativeDate } from '../lib/dates';
+import { LoadingBlock } from '../components/Status';
 import type { Pawn, PawnComment, PawnImage, User } from '../types';
 
 export function PawnDetails({ user }: { user: User | null }) {
@@ -35,6 +37,7 @@ export function PawnDetails({ user }: { user: User | null }) {
 
   async function remove() {
     if (!pawn) return;
+    if (!window.confirm(`Delete "${pawn.pawnName}"? This removes the Pawn and cannot be undone.`)) return;
     await api.deletePawn(pawn.id);
     navigate('/my-pawns');
   }
@@ -112,6 +115,7 @@ export function PawnDetails({ user }: { user: User | null }) {
 
   async function deleteComment(comment: PawnComment) {
     if (!pawn) return;
+    if (!window.confirm('Delete this comment?')) return;
 
     setCommentBusy(true);
     setCommentError('');
@@ -141,7 +145,7 @@ export function PawnDetails({ user }: { user: User | null }) {
   }
 
   if (error) return <p className="alert">{error}</p>;
-  if (!pawn) return <p className="text-zinc-400">Loading pawn...</p>;
+  if (!pawn) return <LoadingBlock label="Loading pawn..." rows={5} />;
 
   const canEdit = user && (user.id === pawn.userId || user.role === 'admin');
   const platformContact = getPlatformContact(pawn);
@@ -282,10 +286,10 @@ export function PawnDetails({ user }: { user: User | null }) {
 
           <section className="space-y-2 border-t border-white/10 pt-5 text-sm text-zinc-400">
             <p className="flex items-center gap-2">
-              <Calendar size={16} /> Created {new Date(pawn.createdAt).toLocaleDateString()}
+              <Calendar size={16} /> Created {relativeDate(pawn.createdAt)}
             </p>
-            <p>Updated {new Date(pawn.updatedAt).toLocaleDateString()}</p>
-            <p>Activity refreshed {new Date(pawn.lastRefreshedAt).toLocaleDateString()}</p>
+            <p>Updated {relativeDate(pawn.updatedAt)}</p>
+            <p>Activity refreshed {relativeDate(pawn.lastRefreshedAt)}</p>
           </section>
 
           {canEdit ? (
@@ -440,12 +444,14 @@ function CommentsPanel({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onDelete: (comment: PawnComment) => void;
 }) {
-  const canComment = Boolean(user?.emailVerifiedAt);
+  const canComment = Boolean(user?.emailVerifiedAt && pawn.activityStars > 1);
 
   return (
     <div className="space-y-4">
       {user ? (
-        canComment ? (
+        pawn.activityStars <= 1 ? (
+          <p className="rounded border border-white/10 bg-ash-900 p-4 text-sm text-zinc-400">This Pawn is inactive, so comments are read-only.</p>
+        ) : canComment ? (
           <form className="space-y-3" onSubmit={onSubmit}>
             <textarea
               className="min-h-28"
@@ -487,7 +493,7 @@ function CommentsPanel({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-medium text-white">{comment.username}</p>
-                  <p className="text-xs text-zinc-500">{new Date(comment.createdAt).toLocaleDateString()}</p>
+                  <p className="text-xs text-zinc-500" title={formatDate(comment.createdAt)}>{relativeDate(comment.createdAt)}</p>
                 </div>
                 {canDelete ? (
                   <button className="icon-button" type="button" onClick={() => onDelete(comment)} disabled={busy} aria-label="Delete comment" title="Delete comment">

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { PawnCard } from '../components/PawnCard';
 import { api } from '../lib/api';
+import { EmptyState, LoadingBlock } from '../components/Status';
 import type { Pawn } from '../types';
 
 export function MyFavorites() {
@@ -33,8 +34,8 @@ export function MyFavorites() {
       </div>
 
       {error ? <p className="alert">{error}</p> : null}
-      {loading ? <p className="text-zinc-400">Loading favorites...</p> : null}
-      {!loading && pawns.length === 0 ? <p className="empty">You have not favorited any pawns yet.</p> : null}
+      {loading ? <LoadingBlock label="Loading favorites..." rows={4} /> : null}
+      {!loading && pawns.length === 0 ? <EmptyState title="You have not favorited any pawns yet.">Use the bookmark button on a Pawn profile to save it here.</EmptyState> : null}
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {pawns.map((pawn) => (

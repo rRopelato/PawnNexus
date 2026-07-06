@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { PawnCard } from '../components/PawnCard';
 import { api } from '../lib/api';
+import { relativeDate } from '../lib/dates';
+import { EmptyState } from '../components/Status';
 import type { Pawn, User } from '../types';
 
 export function Profile({ user }: { user: User | null }) {
@@ -16,7 +18,7 @@ export function Profile({ user }: { user: User | null }) {
       .catch((err) => setError(err instanceof Error ? err.message : 'Unable to load pawns'));
   }, [user]);
 
-  if (!user) return <p className="empty">Login to view your profile.</p>;
+  if (!user) return <EmptyState title="Login to view your profile." />;
 
   return (
     <div className="space-y-8">
@@ -30,7 +32,7 @@ export function Profile({ user }: { user: User | null }) {
             <Info label="Email" value={user.username} />
             <Info label="Username" value={user.username} />
             <Info label="Role" value={user.role} />
-            <Info label="Joined" value={new Date(user.createdAt).toLocaleDateString()} />
+            <Info label="Joined" value={relativeDate(user.createdAt)} />
           </dl>
         </section>
       </div>
@@ -41,7 +43,7 @@ export function Profile({ user }: { user: User | null }) {
           <p className="mt-1 text-sm text-zinc-400">All of your Pawns remain visible here, including inactive 1-star Pawns.</p>
         </div>
         {error ? <p className="alert">{error}</p> : null}
-        {pawns.length === 0 ? <p className="empty">You have not submitted any pawns yet.</p> : null}
+        {pawns.length === 0 ? <EmptyState title="You have not submitted any pawns yet." /> : null}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {pawns.map((pawn) => (
             <PawnCard key={pawn.id} pawn={pawn} />

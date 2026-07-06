@@ -97,6 +97,7 @@ export type PawnRow = {
   status: 'pending' | 'approved' | 'rejected';
   activity_stars: number;
   last_refreshed_at: string;
+  inactive_since: string | null;
   owner_username: string;
   created_at: string;
   updated_at: string;

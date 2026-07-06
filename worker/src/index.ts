@@ -359,7 +359,7 @@ app.get('/pawns/:id/comments', async (c) => {
 
   const requester = await getOptionalUser(c);
   const canManage = requester ? canManagePawn(requester, pawn) : false;
-  if ((pawn.status !== 'approved' || !isPubliclyActive(pawn)) && !canManage) {
+  if (pawn.status !== 'approved' && !canManage) {
     throw new HTTPException(404, { message: 'Pawn not found' });
   }
 
@@ -657,7 +657,7 @@ app.post('/pawns/:id/refresh', requireAuth, requireVerified, async (c) => {
   if (!canManagePawn(user, pawn)) throw new HTTPException(403, { message: 'Not allowed' });
 
   await c.env.DB.prepare(
-    "UPDATE pawns SET activity_stars = 3, last_refreshed_at = datetime('now'), updated_at = datetime('now') WHERE id = ?",
+    "UPDATE pawns SET activity_stars = 3, inactive_since = NULL, last_refreshed_at = datetime('now'), updated_at = datetime('now') WHERE id = ?",
   )
     .bind(pawn.id)
     .run();
@@ -874,6 +874,11 @@ app.post('/admin/unban-email', requireAuth, requireAdmin, async (c) => {
   return c.json({ ok: true });
 });
 
+app.post('/admin/cleanup-inactive', requireAuth, requireAdmin, async (c) => {
+  const cleanup = await cleanupInactivePawns(c.env);
+  return c.json({ cleanup });
+});
+
 app.get('/admin/pawns', requireAuth, requireModerator, async (c) => {
   const status = c.req.query('status') ?? 'pending';
   if (status !== 'pending' && status !== 'approved' && status !== 'rejected') {
@@ -1061,6 +1066,91 @@ function isPubliclyActive(pawn: PawnRow) {
   return pawn.activity_stars > 1;
 }
 
+const inactivePawnImageUrl = 'https://cdn.pawnnexus.com/inactive.png';
+
+type CleanupSummary = {
+  scanned: number;
+  archivedPawns: number;
+  deletedImages: number;
+};
+
+async function cleanupInactivePawns(env: Env, limit = 50): Promise<CleanupSummary> {
+  const result = await env.DB.prepare(
+    `SELECT pawns.*, users.username AS owner_username, ${pawnStatsSelect}
+     FROM pawns
+     JOIN users ON users.id = pawns.user_id
+     WHERE pawns.activity_stars <= 1
+       AND pawns.inactive_since IS NOT NULL
+       AND pawns.inactive_since <= datetime('now', '-30 days')
+       AND pawns.image_url != ?
+     ORDER BY pawns.inactive_since ASC
+     LIMIT ?`,
+  )
+    .bind(inactivePawnImageUrl, limit)
+    .all<PawnRow>();
+
+  let archivedPawns = 0;
+  let deletedImages = 0;
+
+  for (const pawn of result.results) {
+    const imageKeys = collectPawnImageKeys(pawn);
+    for (const key of imageKeys) {
+      await env.IMAGES.delete(key);
+      deletedImages += 1;
+    }
+
+    const placeholderImages = JSON.stringify([{ imageUrl: inactivePawnImageUrl, thumbUrl: inactivePawnImageUrl, sortOrder: 0 }]);
+    await env.DB.prepare(
+      `UPDATE pawns
+       SET image_url = ?, thumbnail_url = ?, image_urls = ?, updated_at = datetime('now')
+       WHERE id = ?`,
+    )
+      .bind(inactivePawnImageUrl, inactivePawnImageUrl, placeholderImages, pawn.id)
+      .run();
+    archivedPawns += 1;
+  }
+
+  return { scanned: result.results.length, archivedPawns, deletedImages };
+}
+
+function collectPawnImageKeys(pawn: PawnRow) {
+  const urls = new Set<string>();
+  if (pawn.image_url) urls.add(pawn.image_url);
+  if (pawn.thumbnail_url) urls.add(pawn.thumbnail_url);
+
+  try {
+    const images = JSON.parse(pawn.image_urls) as Array<{ imageUrl?: unknown; thumbUrl?: unknown }>;
+    if (Array.isArray(images)) {
+      images.forEach((image) => {
+        if (typeof image.imageUrl === 'string') urls.add(image.imageUrl);
+        if (typeof image.thumbUrl === 'string') urls.add(image.thumbUrl);
+      });
+    }
+  } catch {
+    // Legacy rows may only have image_url.
+  }
+
+  const keys = new Set<string>();
+  urls.forEach((url) => {
+    const key = imageUrlToR2Key(url);
+    if (key) keys.add(key);
+  });
+  return [...keys];
+}
+
+function imageUrlToR2Key(value: string) {
+  try {
+    const url = new URL(value);
+    const imagesIndex = url.pathname.indexOf('/images/');
+    if (imagesIndex >= 0) return decodeURIComponent(url.pathname.slice(imagesIndex + '/images/'.length));
+    if (url.pathname.startsWith('/pawns/')) return decodeURIComponent(url.pathname.slice(1));
+    return null;
+  } catch {
+    if (value.startsWith('pawns/')) return value;
+    return null;
+  }
+}
+
 async function updatePawnStatus(db: D1Database, id: string, status: PawnRow['status']) {
   await db.prepare("UPDATE pawns SET status = ?, updated_at = datetime('now') WHERE id = ?").bind(status, id).run();
   const pawn = await getPawnById(db, id);
@@ -1068,4 +1158,9 @@ async function updatePawnStatus(db: D1Database, id: string, status: PawnRow['sta
   return pawn;
 }
 
-export default app;
+export default {
+  fetch: app.fetch,
+  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
+    await cleanupInactivePawns(env);
+  },
+};

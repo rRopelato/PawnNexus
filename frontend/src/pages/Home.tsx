@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { PawnCard } from '../components/PawnCard';
 import { api } from '../lib/api';
+import { EmptyState } from '../components/Status';
 import { inclinations, platforms, specializations, vocations } from '../lib/constants';
 import type { Pawn, PawnFilters, PawnSort, Vocation } from '../types';
 
@@ -198,13 +199,13 @@ export function Home() {
 
       {error ? <p className="alert">{error}</p> : null}
       {!loading && pawns.length === 0 ? (
-        <section className="empty space-y-3">
-          <p className="text-white">No approved pawns match this search yet.</p>
-          <p className="text-sm text-zinc-500">Try clearing filters, changing the sort, or checking back after new submissions are approved.</p>
-        </section>
+        <EmptyState title="No approved pawns match this search yet.">
+          Try clearing filters, changing the sort, or checking back after new submissions are approved.
+        </EmptyState>
       ) : null}
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {loading && pawns.length === 0 ? Array.from({ length: meta.pageSize }).map((_, index) => <PawnCardSkeleton key={index} />) : null}
         {pawns.map((pawn) => (
           <PawnCard key={pawn.id} pawn={pawn} />
         ))}
@@ -254,5 +255,22 @@ function ComingSoonFilter({ label }: { label: string }) {
       <span>{label}</span>
       <input disabled className="opacity-70" placeholder="Coming soon" />
     </label>
+  );
+}
+
+
+function PawnCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded border border-white/10 bg-ash-900">
+      <div className="aspect-[4/3] bg-white/5" />
+      <div className="space-y-3 p-4">
+        <div className="h-5 w-2/3 rounded bg-white/5" />
+        <div className="h-4 w-1/2 rounded bg-white/5" />
+        <div className="flex gap-2 pt-2">
+          <span className="h-7 w-16 rounded bg-white/5" />
+          <span className="h-7 w-20 rounded bg-white/5" />
+        </div>
+      </div>
+    </div>
   );
 }

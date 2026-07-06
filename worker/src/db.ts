@@ -72,6 +72,7 @@ export function publicPawn(row: PawnRow) {
     status: row.status,
     activityStars: row.activity_stars,
     lastRefreshedAt: row.last_refreshed_at,
+    inactiveSince: row.inactive_since ?? null,
     ownerUsername: row.owner_username,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -136,13 +137,19 @@ export async function decayPawnActivity(db: D1Database, pawn: PawnRow) {
     return pawn;
   }
 
-  await db.prepare("UPDATE pawns SET activity_stars = ?, updated_at = datetime('now') WHERE id = ?")
+  const reachedInactive = nextStars <= 1;
+  await db.prepare(
+    reachedInactive
+      ? "UPDATE pawns SET activity_stars = ?, inactive_since = COALESCE(inactive_since, datetime('now')), updated_at = datetime('now') WHERE id = ?"
+      : "UPDATE pawns SET activity_stars = ?, updated_at = datetime('now') WHERE id = ?",
+  )
     .bind(nextStars, pawn.id)
     .run();
 
   return {
     ...pawn,
     activity_stars: nextStars,
+    inactive_since: reachedInactive ? pawn.inactive_since ?? new Date().toISOString() : pawn.inactive_since,
     updated_at: new Date().toISOString(),
   };
 }

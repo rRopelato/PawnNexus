@@ -103,6 +103,7 @@ export type Pawn = {
   status: PawnStatus;
   activityStars: number;
   lastRefreshedAt: string;
+  inactiveSince: string | null;
   ownerUsername: string;
   createdAt: string;
   updatedAt: string;

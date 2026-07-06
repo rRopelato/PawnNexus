@@ -16,3 +16,6 @@ bucket_name = "pawnnexus-images"
 APP_BASE_URL = "https://pawnnexus-dev.pages.dev"
 EMAIL_FROM = "PawnNexus <noreply@pawnnexus.com>"
 PUBLIC_IMAGE_BASE_URL = "https://images.example.com"
+
+[triggers]
+crons = ["0 4 * * *"]

@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
-import { AlertTriangle, Github, Heart, LogOut, Menu, Shield, Swords, UserRound, X } from 'lucide-react';
+import { Github, Heart, LogOut, Menu, Shield, Swords, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from '../types';
@@ -113,22 +113,23 @@ export function Layout({ user, onLogout }: Props) {
       </main>
 
       <footer className="border-t border-white/10 bg-ash-900/60">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 text-sm text-zinc-400 md:flex-row md:items-center md:justify-between">
-          <p>
-            PawnNexus is heavily inspired by{' '}
-            <a className="text-ember-500 hover:text-ember-600" href="https://pawnguild.xyz" target="_blank" rel="noreferrer">
-              PawnGuild.xyz
-            </a>
-            . Made by{' '}
-            <a className="text-ember-500 hover:text-ember-600" href={creator.githubUrl} target="_blank" rel="noreferrer">
-              {creator.name}
-            </a>
-            .
-          </p>
+        <div className="mx-auto grid max-w-7xl gap-4 px-4 py-6 text-sm text-zinc-400 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="space-y-1">
+            <p>
+              PawnNexus is heavily inspired by{' '}
+              <a className="text-ember-500 hover:text-ember-600" href="https://pawnguild.xyz" target="_blank" rel="noreferrer">
+                PawnGuild.xyz
+              </a>
+              . Made by{' '}
+              <a className="text-ember-500 hover:text-ember-600" href={creator.githubUrl} target="_blank" rel="noreferrer">
+                {creator.name}
+              </a>
+              .
+            </p>
+            <p className="text-xs text-zinc-500">Dragon's Dogma 2 belongs to Capcom. PawnNexus is an unofficial community project.</p>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Link className="inline-flex items-center gap-2 text-zinc-300 hover:text-white" to="/faq">
-              FAQ
-            </Link>
+            <Link className="inline-flex items-center gap-2 text-zinc-300 hover:text-white" to="/faq">FAQ</Link>
             <Link className="inline-flex items-center gap-2 text-zinc-300 hover:text-white" to="/support">
               <Heart size={16} /> Support
             </Link>

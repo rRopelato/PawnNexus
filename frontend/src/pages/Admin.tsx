@@ -2,6 +2,8 @@ import { Ban, BadgeCheck, Check, Clock, MailX, Search, Shield, ShieldCheck, Tras
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { api } from '../lib/api';
+import { relativeDate } from '../lib/dates';
+import { LoadingBlock } from '../components/Status';
 import type { AdminStats, BannedEmail, Pawn, User } from '../types';
 
 type AdminSection = 'overview' | 'accounts' | 'pending' | 'approved' | 'moderation' | 'banned';
@@ -31,6 +33,7 @@ export function Admin({ currentUser }: { currentUser: User }) {
   const [banReason, setBanReason] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
 
   const sections = useMemo(
     () => [
@@ -102,11 +105,13 @@ export function Admin({ currentUser }: { currentUser: User }) {
   }
 
   async function removePawn(id: string) {
+    if (!window.confirm('Delete this Pawn? This cannot be undone.')) return;
     await api.deletePawn(id);
     await load();
   }
 
   async function removeUser(id: string) {
+    if (!window.confirm('Delete this account and its Pawns? This cannot be undone.')) return;
     await api.deleteUser(id);
     await load();
   }
@@ -139,6 +144,14 @@ export function Admin({ currentUser }: { currentUser: User }) {
     await loadAdminData(userPage, userSearch);
   }
 
+  async function runCleanup() {
+    if (!window.confirm('Run inactive Pawn cleanup now? R2 images for expired inactive Pawns will be removed.')) return;
+    setMaintenanceMessage('');
+    const result = await api.cleanupInactivePawns();
+    setMaintenanceMessage(`Cleanup complete: ${result.cleanup.archivedPawns} pawns archived and ${result.cleanup.deletedImages} R2 images removed.`);
+    await load();
+  }
+
   const totalUserPages = Math.max(1, Math.ceil(totalUsers / userPageSize));
   const pendingPages = Math.max(1, Math.ceil(pending.total / pawnPageSize));
   const approvedPages = Math.max(1, Math.ceil(approved.total / pawnPageSize));
@@ -159,6 +172,7 @@ export function Admin({ currentUser }: { currentUser: User }) {
       </div>
 
       {error ? <p className="alert">{error}</p> : null}
+      {loading ? <LoadingBlock label="Loading admin dashboard..." rows={4} /> : null}
 
       <nav className="flex flex-wrap gap-2" aria-label="Admin sections">
         {sections.map((section) => (
@@ -210,7 +224,7 @@ export function Admin({ currentUser }: { currentUser: User }) {
                   <p className="font-semibold text-white">{account.username}</p>
                   <p className="break-all text-sm text-zinc-400">{account.email}</p>
                   <p className="mt-1 text-xs text-zinc-500">
-                    {account.role} / {account.status} / joined {new Date(account.createdAt).toLocaleDateString()}
+                    {account.role} / {account.status} / joined {relativeDate(account.createdAt)}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -269,8 +283,20 @@ export function Admin({ currentUser }: { currentUser: User }) {
             {isAdmin ? <ModerationCard title="Banned emails" value={bannedEmails.length} action="Manage bans" onClick={() => setActiveSection('banned')} /> : null}
           </div>
           <div className="rounded border border-dashed border-white/15 bg-ash-900 p-5 text-sm text-zinc-400">
-            Moderators can approve, reject, and delete Pawns. Administrators can additionally manage accounts, roles, and banned emails.
+            Moderators can approve, reject, and delete Pawns. Administrators can additionally manage accounts, roles, banned emails, and maintenance cleanup.
           </div>
+          {isAdmin ? (
+            <div className="rounded border border-white/10 bg-ash-900 p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-semibold text-white">Inactive Pawn cleanup</h3>
+                  <p className="mt-1 text-sm text-zinc-400">Archives Pawns that stayed at 1 activity star for 30 days, removes their R2 images, and keeps comments, likes, and favorites frozen.</p>
+                </div>
+                <button className="button-danger" type="button" onClick={runCleanup}>Run cleanup</button>
+              </div>
+              {maintenanceMessage ? <p className="mt-3 text-sm text-zinc-300">{maintenanceMessage}</p> : null}
+            </div>
+          ) : null}
         </section>
       ) : null}
 

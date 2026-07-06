@@ -231,6 +231,12 @@ export const api = {
       auth: true,
     });
   },
+  async cleanupInactivePawns() {
+    return request<{ cleanup: { scanned: number; archivedPawns: number; deletedImages: number } }>('/admin/cleanup-inactive', {
+      method: 'POST',
+      auth: true,
+    });
+  },
   async adminPawns(options: { status?: Pawn['status']; page?: number; pageSize?: number; search?: string } = {}) {
     const search = new URLSearchParams();
     if (options.status) search.set('status', options.status);

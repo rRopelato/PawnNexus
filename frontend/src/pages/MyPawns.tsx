@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { BadgeCheck, Bookmark, Clock, EyeOff, Heart, Plus, ScrollText } from 'lucide-react';
 import { PawnCard } from '../components/PawnCard';
 import { api } from '../lib/api';
+import { EmptyState, LoadingBlock } from '../components/Status';
 import type { Pawn } from '../types';
 
 export function MyPawns() {
@@ -46,6 +47,7 @@ export function MyPawns() {
       </div>
 
       {error ? <p className="alert">{error}</p> : null}
+      {loading ? <LoadingBlock label="Loading your Pawns..." rows={4} /> : null}
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <SummaryCard icon={<ScrollText size={18} />} label="Total pawns" value={summary.total} />
@@ -57,13 +59,12 @@ export function MyPawns() {
       </section>
 
       {!loading && pawns.length === 0 ? (
-        <section className="empty space-y-4">
-          <p>You have not submitted any pawns yet.</p>
-          <Link className="button-primary" to="/add-pawn">
+        <EmptyState title="You have not submitted any pawns yet.">
+          <Link className="button-primary mt-2" to="/add-pawn">
             <Plus size={16} />
             Add your first Pawn
           </Link>
-        </section>
+        </EmptyState>
       ) : null}
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

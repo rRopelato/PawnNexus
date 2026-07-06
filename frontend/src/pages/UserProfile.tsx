@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { PawnCard } from '../components/PawnCard';
 import { api } from '../lib/api';
+import { formatDate, relativeDate } from '../lib/dates';
+import { EmptyState, LoadingBlock } from '../components/Status';
 import type { Pawn, PublicUserProfile } from '../types';
 
 export function UserProfile() {
@@ -27,9 +29,9 @@ export function UserProfile() {
       .finally(() => setLoading(false));
   }, [username]);
 
-  if (loading) return <p className="text-zinc-400">Loading profile...</p>;
+  if (loading) return <LoadingBlock label="Loading profile..." rows={4} />;
   if (error) return <p className="alert">{error}</p>;
-  if (!profile) return <p className="empty">User not found.</p>;
+  if (!profile) return <EmptyState title="User not found." />;
 
   return (
     <div className="space-y-8">
@@ -37,12 +39,12 @@ export function UserProfile() {
         <div className="space-y-2">
           <p className="text-sm uppercase tracking-[0.2em] text-ember-500">User profile</p>
           <h1 className="text-4xl font-semibold text-white md:text-6xl">{profile.username}</h1>
-          <p className="text-zinc-400">Community member since {new Date(profile.createdAt).toLocaleDateString()}.</p>
+          <p className="text-zinc-400">Community member since {formatDate(profile.createdAt)}.</p>
         </div>
 
         <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Stat icon={<Shield size={16} />} label="Role" value={profile.role} />
-          <Stat icon={<Calendar size={16} />} label="Joined" value={new Date(profile.createdAt).toLocaleDateString()} />
+          <Stat icon={<Calendar size={16} />} label="Joined" value={relativeDate(profile.createdAt)} />
           <Stat icon={<Heart size={16} />} label="Likes received" value={String(profile.totalLikes)} />
           <Stat icon={<Star size={16} />} label="Favorites received" value={String(profile.totalFavorites)} />
         </dl>
@@ -54,7 +56,7 @@ export function UserProfile() {
           <p className="mt-1 text-sm text-zinc-400">{profile.approvedPawns} approved {profile.approvedPawns === 1 ? 'Pawn' : 'Pawns'} shared by {profile.username}.</p>
         </div>
 
-        {pawns.length === 0 ? <p className="empty">This user has no approved Pawns yet.</p> : null}
+        {pawns.length === 0 ? <EmptyState title="This user has no approved Pawns yet." /> : null}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {pawns.map((pawn) => (
             <PawnCard key={pawn.id} pawn={pawn} />
