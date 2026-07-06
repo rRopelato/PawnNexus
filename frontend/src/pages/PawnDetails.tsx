@@ -1,4 +1,4 @@
-import { Calendar, ChevronLeft, ChevronRight, Edit, RefreshCw, Star, Trash2 } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Edit, MessageSquare, RefreshCw, Shield, Star, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api } from '../lib/api';
@@ -45,62 +45,46 @@ export function PawnDetails({ user }: { user: User | null }) {
 
   const canEdit = user && (user.id === pawn.userId || user.role === 'admin');
   const platformContact = getPlatformContact(pawn);
+  const weaponSkills = pawn.weaponSkills?.length ? pawn.weaponSkills : pawn.skills;
+  const weapons: Array<[string, string | null]> = [
+    ['Weapon 1', pawn.weapon1],
+    ...(pawn.vocation === 'Fighter' ? [['Weapon 2', pawn.weapon2] as [string, string | null]] : []),
+  ];
+  const armor: Array<[string, string | null]> = [
+    ['Head', pawn.head],
+    ['Body', pawn.body],
+    ['Legs', pawn.legs],
+    ['Cloak', pawn.cloak],
+    ['Ring 1', pawn.ring1],
+    ['Ring 2', pawn.ring2],
+  ];
+  const augments: Array<[string, string | null]> = [
+    ['Augment 1', pawn.augment1],
+    ['Augment 2', pawn.augment2],
+    ['Augment 3', pawn.augment3],
+    ['Augment 4', pawn.augment4],
+    ['Augment 5', pawn.augment5],
+    ['Augment 6', pawn.augment6],
+  ];
 
   return (
-    <article className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <div className="space-y-6">
-        <ImageCarousel images={pawn.images} pawnName={pawn.pawnName} />
-        <section className="space-y-3">
-          <h1 className="text-4xl font-semibold text-white">{pawn.pawnName}</h1>
-          <p className="whitespace-pre-line leading-7 text-zinc-300">{pawn.description}</p>
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="text-xl font-semibold text-white">Weapon Skills</h2>
-          <div className="flex flex-wrap gap-2">
-            {(pawn.weaponSkills ?? pawn.skills).map((skill) => (
-              <span key={skill} className="tag">
-                {skill}
-              </span>
-            ))}
+    <article className="space-y-8">
+      <section className="grid gap-6 border-b border-white/10 pb-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <p className="text-sm uppercase tracking-[0.2em] text-ember-500">Pawn profile</p>
+            <h1 className="text-4xl font-semibold text-white md:text-6xl">{pawn.pawnName}</h1>
+            <p className="text-lg text-zinc-300">Arisen by {pawn.arisenName}</p>
           </div>
-        </section>
-
-        <section className="space-y-5">
-          <DetailGroup title="Weapons" items={[
-            ['Weapon 1', pawn.weapon1],
-            ...(pawn.vocation === 'Fighter' ? [['Weapon 2', pawn.weapon2] as [string, string | null]] : []),
-          ]} />
-          <DetailGroup title="Armor" items={[
-            ['Head', pawn.head],
-            ['Body', pawn.body],
-            ['Legs', pawn.legs],
-            ['Cloak', pawn.cloak],
-            ['Ring 1', pawn.ring1],
-            ['Ring 2', pawn.ring2],
-          ]} />
-          <DetailGroup title="Augments" items={[
-            ['Augment 1', pawn.augment1],
-            ['Augment 2', pawn.augment2],
-            ['Augment 3', pawn.augment3],
-            ['Augment 4', pawn.augment4],
-            ['Augment 5', pawn.augment5],
-            ['Augment 6', pawn.augment6],
-          ]} />
-          <DetailGroup title="Specialization" items={[[ 'Specialization', pawn.specialization ]]} />
-        </section>
-      </div>
-
-      <aside className="h-fit space-y-6 rounded border border-white/10 bg-ash-900 p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-sm text-zinc-400">Arisen</p>
-            <p className="text-xl font-semibold text-white">{pawn.arisenName}</p>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <span className="tag">{pawn.vocation}</span>
+            <span className="tag">{pawn.gender}</span>
+            <span className="tag">{pawn.race}</span>
+            <span className="tag">{pawn.inclination}</span>
           </div>
-          <span className="tag">{pawn.status}</span>
         </div>
 
-        <div className="rounded border border-white/10 bg-ash-850 p-4">
+        <div className="rounded border border-white/10 bg-ash-900 p-4">
           <p className="flex items-center gap-2 text-sm font-medium text-white">
             <Star size={16} className="text-ember-500" /> Activity {pawn.activityStars}/3
           </p>
@@ -108,41 +92,94 @@ export function PawnDetails({ user }: { user: User | null }) {
             Refresh weekly to keep this pawn public. Pawns at 1 star stay visible to their owner but leave public browsing.
           </p>
         </div>
+      </section>
 
-        <dl className="grid grid-cols-2 gap-4 text-sm">
-          <Info label="Platform" value={pawn.platform} />
-          <Info label="Gender" value={pawn.gender} />
-          <Info label="Race" value={pawn.race} />
-          <Info label="Vocation" value={pawn.vocation} />
-          <Info label="Level" value={String(pawn.level)} />
-          <Info label="Inclination" value={pawn.inclination} />
-          <Info label="Pawn ID" value={pawn.pawnId} />
-          <Info label="Owner" value={pawn.ownerUsername} />
-          <Info label={platformContact.label} value={platformContact.value} href={platformContact.href} />
-        </dl>
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-8">
+          <ProfileSection title="Images">
+            <ImageCarousel images={pawn.images} pawnName={pawn.pawnName} />
+          </ProfileSection>
 
-        <div className="space-y-2 border-t border-white/10 pt-4 text-sm text-zinc-400">
-          <p className="flex items-center gap-2">
-            <Calendar size={16} /> Created {new Date(pawn.createdAt).toLocaleDateString()}
-          </p>
-          <p>Updated {new Date(pawn.updatedAt).toLocaleDateString()}</p>
-          <p>Activity refreshed {new Date(pawn.lastRefreshedAt).toLocaleDateString()}</p>
+          <ProfileSection title="Description">
+            <p className="whitespace-pre-line leading-7 text-zinc-300">{pawn.description || 'Not filled'}</p>
+          </ProfileSection>
+
+          <ProfileSection title="Equipment">
+            <div className="grid gap-5 md:grid-cols-2">
+              <FieldChips title="Weapons" items={weapons} />
+              <FieldChips title="Armor" items={armor} />
+            </div>
+          </ProfileSection>
+
+          <ProfileSection title="Weapon Skills">
+            <ValueChips values={weaponSkills} emptyLabel="No weapon skills filled" />
+          </ProfileSection>
+
+          <ProfileSection title="Augments">
+            <FieldChips items={augments} />
+          </ProfileSection>
+
+          <ProfileSection title="Specialization">
+            <ValueChips values={[pawn.specialization].filter(Boolean) as string[]} emptyLabel="Not filled" />
+          </ProfileSection>
+
+          <ProfileSection title="Comments">
+            <div className="rounded border border-dashed border-white/10 bg-ash-950/40 p-5 text-sm text-zinc-400">
+              <p className="flex items-center gap-2 font-medium text-zinc-200">
+                <MessageSquare size={16} className="text-ember-500" /> Comments are coming soon.
+              </p>
+              <p className="mt-2">This section is reserved for verified-user comments in a future update.</p>
+            </div>
+          </ProfileSection>
         </div>
 
-        {canEdit ? (
-          <div className="grid gap-2 border-t border-white/10 pt-4 sm:grid-cols-[1fr_auto_auto]">
-            <button className="button-secondary" onClick={refresh} disabled={busy}>
-              <RefreshCw size={16} /> {busy ? 'Refreshing...' : 'Refresh'}
-            </button>
-            <Link className="button-secondary" to={`/pawns/${pawn.id}/edit`} aria-label="Edit pawn" title="Edit pawn">
-              <Edit size={16} />
-            </Link>
-            <button className="button-danger" onClick={remove} aria-label="Delete pawn" title="Delete pawn">
-              <Trash2 size={16} />
-            </button>
-          </div>
-        ) : null}
-      </aside>
+        <aside className="h-fit space-y-5 rounded border border-white/10 bg-ash-900 p-5 lg:sticky lg:top-24">
+          <section className="space-y-3">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+              <Shield size={18} className="text-ember-500" /> Pawn info
+            </h2>
+            <dl className="grid grid-cols-2 gap-4 text-sm">
+              <Info label="Owner" value={pawn.ownerUsername} />
+              <Info label="Pawn ID" value={pawn.pawnId} />
+              <Info label="Platform" value={pawn.platform} />
+              <Info label="Vocation" value={pawn.vocation} />
+              <Info label="Level" value={String(pawn.level)} />
+              <Info label="Inclination" value={pawn.inclination} />
+              <Info label="Gender" value={pawn.gender} />
+              <Info label="Race" value={pawn.race} />
+            </dl>
+          </section>
+
+          <section className="space-y-3 border-t border-white/10 pt-5">
+            <h2 className="text-lg font-semibold text-white">Platform IDs</h2>
+            <dl className="grid gap-3 text-sm">
+              <Info label={platformContact.label} value={platformContact.value} href={platformContact.href} />
+            </dl>
+          </section>
+
+          <section className="space-y-2 border-t border-white/10 pt-5 text-sm text-zinc-400">
+            <p className="flex items-center gap-2">
+              <Calendar size={16} /> Created {new Date(pawn.createdAt).toLocaleDateString()}
+            </p>
+            <p>Updated {new Date(pawn.updatedAt).toLocaleDateString()}</p>
+            <p>Activity refreshed {new Date(pawn.lastRefreshedAt).toLocaleDateString()}</p>
+          </section>
+
+          {canEdit ? (
+            <div className="grid gap-2 border-t border-white/10 pt-5 sm:grid-cols-[1fr_auto_auto]">
+              <button className="button-secondary" onClick={refresh} disabled={busy}>
+                <RefreshCw size={16} /> {busy ? 'Refreshing...' : 'Refresh'}
+              </button>
+              <Link className="button-secondary" to={'/pawns/' + pawn.id + '/edit'} aria-label="Edit pawn" title="Edit pawn">
+                <Edit size={16} />
+              </Link>
+              <button className="button-danger" onClick={remove} aria-label="Delete pawn" title="Delete pawn">
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ) : null}
+        </aside>
+      </div>
     </article>
   );
 }
@@ -186,10 +223,10 @@ function ImageCarousel({ images, pawnName }: { images: PawnImage[]; pawnName: st
             <img
               key={image.imageUrl}
               src={image.imageUrl}
-              alt={`${pawnName} screenshot ${imageIndex + 1}`}
+              alt={pawnName + ' screenshot ' + (imageIndex + 1)}
               loading={imageIndex === 0 ? 'eager' : 'lazy'}
               decoding="async"
-              className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-300 ${imageIndex === index ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+              className={'absolute inset-0 h-full w-full object-contain transition-opacity duration-300 ' + (imageIndex === index ? 'opacity-100' : 'pointer-events-none opacity-0')}
             />
           ) : null
         ))}
@@ -209,10 +246,10 @@ function ImageCarousel({ images, pawnName }: { images: PawnImage[]; pawnName: st
           {orderedImages.map((image, imageIndex) => (
             <button
               key={image.thumbUrl}
-              className={`h-2.5 w-2.5 rounded-full ${imageIndex === index ? 'bg-ember-500' : 'bg-white/20'}`}
+              className={'h-2.5 w-2.5 rounded-full ' + (imageIndex === index ? 'bg-ember-500' : 'bg-white/20')}
               onClick={() => selectImage(imageIndex)}
-              aria-label={`Show image ${imageIndex + 1}`}
-              title={`Show image ${imageIndex + 1}`}
+              aria-label={'Show image ' + (imageIndex + 1)}
+              title={'Show image ' + (imageIndex + 1)}
             />
           ))}
         </div>
@@ -221,10 +258,19 @@ function ImageCarousel({ images, pawnName }: { images: PawnImage[]; pawnName: st
   );
 }
 
-function DetailGroup({ title, items }: { title: string; items: Array<[string, string | null]> }) {
+function ProfileSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       <h2 className="text-xl font-semibold text-white">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function FieldChips({ title, items }: { title?: string; items: Array<[string, string | null]> }) {
+  return (
+    <div className="space-y-3">
+      {title ? <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-zinc-500">{title}</h3> : null}
       <div className="flex flex-wrap gap-2">
         {items.map(([label, value]) => {
           const filled = value?.trim();
@@ -235,7 +281,18 @@ function DetailGroup({ title, items }: { title: string; items: Array<[string, st
           );
         })}
       </div>
-    </section>
+    </div>
+  );
+}
+
+function ValueChips({ values, emptyLabel }: { values: string[]; emptyLabel: string }) {
+  const filled = values.map((value) => value.trim()).filter(Boolean);
+  if (filled.length === 0) return <span className="tag border-white/5 bg-white/5 text-zinc-500">{emptyLabel}</span>;
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {filled.map((value) => <span key={value} className="tag">{value}</span>)}
+    </div>
   );
 }
 

@@ -10,3 +10,5 @@ coverage
 CODEX_ROADMAP.md
 *.tsbuildinfo
 backups
+wrangler.dev.toml
+wrangler.toml
