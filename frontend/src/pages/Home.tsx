@@ -9,6 +9,7 @@ import type { Pawn, PawnFilters, PawnSort, Vocation } from '../types';
 const sortOptions: Array<{ value: PawnSort; label: string }> = [
   { value: 'newest', label: 'Newest' },
   { value: 'recently-refreshed', label: 'Recently refreshed' },
+  { value: 'trending-week', label: 'Trending this week' },
   { value: 'random', label: 'Random' },
   { value: 'level-desc', label: 'Level high to low' },
   { value: 'level-asc', label: 'Level low to high' },

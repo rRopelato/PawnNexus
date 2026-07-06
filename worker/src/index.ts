@@ -844,12 +844,13 @@ async function decayPawns(db: D1Database, pawns: PawnRow[]) {
 
 
 function normalizePawnSort(sort: string | undefined) {
-  if (sort === 'recently-refreshed' || sort === 'random' || sort === 'level-desc' || sort === 'level-asc') return sort;
+  if (sort === 'recently-refreshed' || sort === 'trending-week' || sort === 'random' || sort === 'level-desc' || sort === 'level-asc') return sort;
   return 'newest';
 }
 
 function sqlPawnOrder(sort: string) {
   if (sort === 'recently-refreshed') return 'pawns.last_refreshed_at DESC, pawns.created_at DESC';
+  if (sort === 'trending-week') return "(SELECT COUNT(*) FROM pawn_likes WHERE pawn_likes.pawn_id = pawns.id AND pawn_likes.created_at >= datetime('now', '-7 days')) DESC, pawns.created_at DESC";
   if (sort === 'random') return 'random()';
   if (sort === 'level-desc') return 'pawns.level DESC, pawns.created_at DESC';
   if (sort === 'level-asc') return 'pawns.level ASC, pawns.created_at DESC';
@@ -858,6 +859,7 @@ function sqlPawnOrder(sort: string) {
 
 function sortPawns(a: PawnRow, b: PawnRow, sort: string) {
   if (sort === 'recently-refreshed') return Date.parse(b.last_refreshed_at) - Date.parse(a.last_refreshed_at) || Date.parse(b.created_at) - Date.parse(a.created_at);
+  if (sort === 'trending-week') return 0;
   if (sort === 'level-desc') return b.level - a.level || Date.parse(b.created_at) - Date.parse(a.created_at);
   if (sort === 'level-asc') return a.level - b.level || Date.parse(b.created_at) - Date.parse(a.created_at);
   if (sort === 'random') return 0;

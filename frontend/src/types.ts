@@ -90,7 +90,7 @@ export type Pawn = {
   userFavorited: boolean;
 };
 
-export type PawnSort = 'newest' | 'recently-refreshed' | 'random' | 'level-desc' | 'level-asc';
+export type PawnSort = 'newest' | 'recently-refreshed' | 'trending-week' | 'random' | 'level-desc' | 'level-asc';
 
 export type PawnFilters = {
   platform?: string;
