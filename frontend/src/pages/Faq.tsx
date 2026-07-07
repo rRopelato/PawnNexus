@@ -79,7 +79,7 @@ const faqSections = [
       },
       {
         question: 'Who can approve or remove Pawns?',
-        answer: 'Moderators can approve, reject, and delete Pawn submissions. Administrators can also manage accounts, roles, bans, and moderation settings.',
+        answer: 'Moderators can approve, reject, and delete Pawn submissions.',
       },
     ],
   },
@@ -98,7 +98,7 @@ export function Faq() {
         </div>
         <div className="rounded border border-white/10 bg-ash-900 p-4 text-sm text-zinc-400">
           <p className="font-semibold text-white">Still need help?</p>
-          <p className="mt-1">Reach me through GitHub, LinkedIn, Discord, or the support page.</p>
+          <p className="mt-1">Reach me through GitHub, LinkedIn or Discord.</p>
         </div>
       </section>
 

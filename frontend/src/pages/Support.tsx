@@ -36,7 +36,7 @@ export function Support() {
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-[0.8fr_1.2fr]">
-            <InfoBox label="Pawn" value={creator.pawnName} />
+            <InfoBox label="Pawn" value={creator.pawnName} href="https://pawnnexus.com/pawns/3bb93d31-55d0-4753-a973-7d1fe4f6c19f" />
             <div className="rounded border border-white/10 bg-ash-900 p-3">
               <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">Pawn ID</p>
               <div className="mt-1 flex items-center justify-between gap-3">
@@ -130,13 +130,23 @@ export function Support() {
   );
 }
 
-function InfoBox({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded border border-white/10 bg-ash-900 p-3">
+function InfoBox({ label, value, href }: { label: string; value: string; href?: string }) {
+  const content = (
+    <>
       <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">{label}</p>
       <p className="mt-1 text-base font-semibold text-white">{value}</p>
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <a className="rounded border border-white/10 bg-ash-900 p-3 transition hover:border-ember-500/50 hover:bg-ash-850" href={href}>
+        {content}
+      </a>
+    );
+  }
+
+  return <div className="rounded border border-white/10 bg-ash-900 p-3">{content}</div>;
 }
 
 function ContactLinks() {
