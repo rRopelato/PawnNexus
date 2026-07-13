@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router';
-import { Github, Heart, LogOut, Menu, Shield, Swords, UserRound, X } from 'lucide-react';
+import { Github, Heart, LogOut, Menu, MessageCircle, Shield, Swords, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from '../types';
@@ -135,6 +135,9 @@ export function Layout({ user, onLogout }: Props) {
             </Link>
             <a className="inline-flex items-center gap-2 text-zinc-300 hover:text-white" href={creator.githubUrl} target="_blank" rel="noreferrer">
               <Github size={16} /> GitHub
+            </a>
+            <a className="inline-flex items-center gap-2 text-zinc-300 hover:text-white" href="https://discord.gg/n5GfhRyE8f" target="_blank" rel="noreferrer">
+              <MessageCircle size={16} /> Discord
             </a>
           </div>
         </div>

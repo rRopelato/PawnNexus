@@ -139,7 +139,22 @@ export function Faq() {
           <LinkRow />
         </InfoCard>
 
-        <InfoCard icon={<Heart size={18} />} title="Support the project" highlight>
+        <InfoCard icon={<MessageCircle size={18} />} title="Dogmaholics Discord">
+          <p className="text-sm leading-6 text-zinc-400">
+            A cozy community dedicated to all things Dragon's Dogma. Whether you are seeking the perfect Pawn to hire,
+            discussing lore, sharing epic screenshots, or optimizing your vocation, you've found your home.
+          </p>
+          <a
+            className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-ember-500 hover:text-ember-600"
+            href="https://discord.gg/n5GfhRyE8f"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <MessageCircle size={15} /> Join Dogmaholics
+          </a>
+        </InfoCard>
+
+        <InfoCard icon={<Heart size={18} />} title="Support the project" highlight wide>
           <p className="text-sm leading-6 text-zinc-300">
             Share the site, report bugs, support the project, or use my Pawn {creator.pawnName}. Pawn ID: <span className="font-mono text-white">{creator.pawnId}</span>.
           </p>
@@ -168,9 +183,9 @@ export function Faq() {
   );
 }
 
-function InfoCard({ icon, title, children, highlight = false }: { icon: React.ReactNode; title: string; children: React.ReactNode; highlight?: boolean }) {
+function InfoCard({ icon, title, children, highlight = false, wide = false }: { icon: React.ReactNode; title: string; children: React.ReactNode; highlight?: boolean; wide?: boolean }) {
   return (
-    <div className={(highlight ? 'border-ember-500/25 bg-ember-500/10' : 'border-white/10 bg-ash-900') + ' rounded border p-4'}>
+    <div className={(highlight ? 'border-ember-500/25 bg-ember-500/10' : 'border-white/10 bg-ash-900') + (wide ? ' lg:col-span-2' : '') + ' rounded border p-4'}>
       <div className="flex gap-3">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded border border-white/10 bg-ash-850 text-ember-500">{icon}</span>
         <div className="min-w-0">
