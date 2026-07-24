@@ -1,5 +1,5 @@
 import { ArrowUpDown, BadgeCheck, ChevronDown, ChevronLeft, ChevronRight, Filter, Heart, LayoutGrid, List, Search, SlidersHorizontal, Star, UserRound } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { PawnCard } from '../components/PawnCard';
 import { api } from '../lib/api';
@@ -22,16 +22,27 @@ export function Home() {
   const [searchParams] = useSearchParams();
   const [pawns, setPawns] = useState<Pawn[]>([]);
   const [filters, setFilters] = useState<PawnFilters>(() => getInitialBrowseFilters(searchParams));
+  const [searchInput, setSearchInput] = useState(() => searchParams.get('search') ?? '');
   const [meta, setMeta] = useState({ page: 1, pageSize: getBrowsePageSize(), total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [viewMode, setViewMode] = useState<BrowseView>('grid');
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     const search = searchParams.get('search') ?? '';
+    setSearchInput(search);
     setFilters((current) => (current.search ?? '') === search ? current : { ...current, search, page: 1 });
   }, [searchParams]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setFilters((current) => (current.search ?? '') === searchInput ? current : { ...current, search: searchInput, page: 1 });
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     function syncPageSize() {
@@ -44,16 +55,24 @@ export function Home() {
   }, []);
 
   useEffect(() => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
     setLoading(true);
     api
       .pawns(filters)
       .then((result) => {
+        if (requestId !== requestIdRef.current) return;
         setPawns(result.pawns);
         setMeta({ page: result.page, pageSize: result.pageSize, total: result.total, totalPages: result.totalPages });
         setError('');
       })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Unable to load pawns'))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (requestId !== requestIdRef.current) return;
+        setError(err instanceof Error ? err.message : 'Unable to load pawns');
+      })
+      .finally(() => {
+        if (requestId === requestIdRef.current) setLoading(false);
+      });
   }, [filters]);
 
   function updateFilters(next: Partial<PawnFilters>) {
@@ -65,6 +84,7 @@ export function Home() {
   }
 
   function clearFilters() {
+    setSearchInput('');
     setFilters({ page: 1, pageSize: filters.pageSize, sort: 'newest' });
   }
 
@@ -97,8 +117,8 @@ export function Home() {
               <input
                 className="pl-10"
                 placeholder="Search by name"
-                value={filters.search ?? ''}
-                onChange={(event) => updateFilters({ search: event.target.value })}
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
               />
             </div>
           </label>

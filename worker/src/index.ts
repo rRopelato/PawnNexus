@@ -336,20 +336,19 @@ app.get('/pawns', async (c) => {
 });
 
 app.get('/pawns/:id', async (c) => {
-  const pawn = await getPawnById(c.env.DB, c.req.param('id'));
+  const requester = await getOptionalUser(c);
+  const pawn = await getPawnById(c.env.DB, c.req.param('id'), requester?.id ?? null);
   if (!pawn) {
     throw new HTTPException(404, { message: 'Pawn not found' });
   }
 
-  const requester = await getOptionalUser(c);
-  const pawnWithViewer = requester ? await getPawnById(c.env.DB, pawn.id, requester.id) : pawn;
   const canManage = requester ? canManagePawn(requester, pawn) : false;
 
   if ((pawn.status !== 'approved' || !isPubliclyActive(pawn)) && !canManage) {
     throw new HTTPException(404, { message: 'Pawn not found' });
   }
 
-  return c.json({ pawn: publicPawn(pawnWithViewer ?? pawn) });
+  return c.json({ pawn: publicPawn(pawn) });
 });
 
 
@@ -1074,20 +1073,21 @@ type CleanupSummary = {
   deletedImages: number;
 };
 
+type CleanupPawnImageRow = Pick<PawnRow, 'id' | 'image_url' | 'thumbnail_url' | 'image_urls'>;
+
 async function cleanupInactivePawns(env: Env, limit = 50): Promise<CleanupSummary> {
   const result = await env.DB.prepare(
-    `SELECT pawns.*, users.username AS owner_username, ${pawnStatsSelect}
+    `SELECT id, image_url, thumbnail_url, image_urls
      FROM pawns
-     JOIN users ON users.id = pawns.user_id
-     WHERE pawns.activity_stars <= 1
-       AND pawns.inactive_since IS NOT NULL
-       AND pawns.inactive_since <= datetime('now', '-30 days')
-       AND pawns.image_url != ?
-     ORDER BY pawns.inactive_since ASC
+     WHERE activity_stars <= 1
+       AND inactive_since IS NOT NULL
+       AND inactive_since <= datetime('now', '-30 days')
+       AND image_url != ?
+     ORDER BY inactive_since ASC
      LIMIT ?`,
   )
     .bind(inactivePawnImageUrl, limit)
-    .all<PawnRow>();
+    .all<CleanupPawnImageRow>();
 
   let archivedPawns = 0;
   let deletedImages = 0;
@@ -1113,7 +1113,7 @@ async function cleanupInactivePawns(env: Env, limit = 50): Promise<CleanupSummar
   return { scanned: result.results.length, archivedPawns, deletedImages };
 }
 
-function collectPawnImageKeys(pawn: PawnRow) {
+function collectPawnImageKeys(pawn: Pick<PawnRow, 'image_url' | 'thumbnail_url' | 'image_urls'>) {
   const urls = new Set<string>();
   if (pawn.image_url) urls.add(pawn.image_url);
   if (pawn.thumbnail_url) urls.add(pawn.thumbnail_url);
