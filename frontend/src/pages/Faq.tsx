@@ -53,7 +53,7 @@ const faqSections = [
       },
       {
         question: 'What image formats are accepted?',
-        answer: 'Uploads accept JPG, JPEG, PNG, and WebP up to 5 MB each. Images are processed into optimized WebP when possible, with JPEG fallback for mobile browsers that cannot export WebP reliably.',
+        answer: 'Uploads accept JPG, JPEG, PNG, and WebP up to 10 MB each. Images are processed into optimized WebP when possible, with JPEG fallback for mobile browsers that cannot export WebP reliably.',
       },
       {
         question: 'Why does the first image matter?',

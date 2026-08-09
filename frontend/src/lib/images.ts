@@ -1,5 +1,5 @@
 const maxImages = 5;
-const maxOriginalBytes = 5 * 1024 * 1024;
+const maxOriginalBytes = 10 * 1024 * 1024;
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 type ProcessedImage = {
@@ -43,7 +43,7 @@ function validateOriginal(file: File) {
   }
 
   if (file.size > maxOriginalBytes) {
-    throw new Error(`${file.name} must be 5 MB or less.`);
+    throw new Error(`${file.name} must be 10 MB or less.`);
   }
 }
 

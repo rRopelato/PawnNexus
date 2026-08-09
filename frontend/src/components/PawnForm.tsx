@@ -263,7 +263,7 @@ export function PawnForm({ initial, onSubmit }: Props) {
         <label className="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-3 rounded border border-dashed border-white/20 bg-ash-850 p-4 text-sm text-zinc-300 transition hover:border-ember-500/50">
           <Upload size={24} />
           Upload up to 5 images
-          <span className="text-xs text-zinc-500">JPG, JPEG, PNG, or WebP. 5 MB each. WebP preferred, JPEG fallback on mobile.</span>
+          <span className="text-xs text-zinc-500">JPG, JPEG, PNG, or WebP. 10 MB each. WebP preferred, JPEG fallback on mobile.</span>
           <input className="sr-only" multiple type="file" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={(event) => handleFiles(event.target.files)} />
         </label>
         {images.length > 0 ? (

@@ -126,11 +126,22 @@ export async function getPawnById(db: D1Database, id: string, viewerId: string |
   return pawn ? decayPawnActivity(db, pawn) : null;
 }
 
+// Lower-traffic platforms see fewer manual refreshes, so give them extra
+// weeks before activity stars start dropping to avoid the browse list
+// looking abandoned for those platforms.
+const decayGraceWeeks: Partial<Record<string, number>> = {
+  Xbox: 1,
+};
+
 export async function decayPawnActivity(db: D1Database, pawn: PawnRow) {
   const refreshedAt = Date.parse(`${pawn.last_refreshed_at}Z`);
   if (!Number.isFinite(refreshedAt)) return pawn;
 
-  const weeksSinceRefresh = Math.floor((Date.now() - refreshedAt) / (7 * 24 * 60 * 60 * 1000));
+  const grace = decayGraceWeeks[pawn.platform] ?? 0;
+  const weeksSinceRefresh = Math.max(
+    0,
+    Math.floor((Date.now() - refreshedAt) / (7 * 24 * 60 * 60 * 1000)) - grace,
+  );
   const nextStars = Math.max(1, 3 - weeksSinceRefresh);
 
   if (nextStars >= pawn.activity_stars) {

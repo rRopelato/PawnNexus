@@ -8,7 +8,7 @@ const genders = new Set(['Female', 'Male', 'Unspecified']);
 const races = new Set(['Human', 'Beastren']);
 const specializations = new Set(['Aphonite', 'Chirurgeon', 'Forager', 'Hawker', 'Logistician', 'Woodland Wordsmith', 'Guardian']);
 const maxPawnImages = 5;
-const maxUploadBytes = 5 * 1024 * 1024;
+const maxUploadBytes = 10 * 1024 * 1024;
 const allowedPawnImageUrlPrefixes = [
   'https://pawnnexus-api.r-ropelato.workers.dev/images/',
   'https://pawnnexus-api-dev.r-ropelato.workers.dev/images/',
@@ -73,7 +73,7 @@ export function validatePassword(value: unknown) {
 export async function validateOriginalImageUpload(file: File) {
   if (file.size === 0) throw new HTTPException(400, { message: 'image is empty' });
   if (file.size > maxUploadBytes) {
-    throw new HTTPException(400, { message: 'each image must be 5MB or less' });
+    throw new HTTPException(400, { message: 'each image must be 10MB or less' });
   }
 
   const bytes = new Uint8Array(await file.arrayBuffer());
