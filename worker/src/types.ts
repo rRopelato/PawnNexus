@@ -1,6 +1,7 @@
 export type Env = {
   DB: D1Database;
   IMAGES: R2Bucket;
+  AUTH_RATE_LIMITER: RateLimit;
   JWT_SECRET: string;
   PUBLIC_IMAGE_BASE_URL: string;
   RESEND_API_KEY: string;

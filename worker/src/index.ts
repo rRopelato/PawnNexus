@@ -17,7 +17,7 @@ import {
   publicUser,
 } from './db';
 import { sendPasswordResetEmail, sendVerificationEmail } from './email';
-import { requireAdmin, requireAuth, requireModerator, requireVerified } from './middleware';
+import { rateLimit, requireAdmin, requireAuth, requireModerator, requireVerified } from './middleware';
 import type { BannedEmailRow, CommentRow, Env, PawnRow, UserRow, Variables } from './types';
 import {
   requireString,
@@ -56,7 +56,7 @@ app.onError((err, c) => {
   return c.json({ error: 'Internal server error' }, 500);
 });
 
-app.post('/register', async (c) => {
+app.post('/register', rateLimit('register'), async (c) => {
   const body = await c.req.json<Record<string, unknown>>();
   const email = validateEmail(body.email);
   const username = validateUsername(body.username);
@@ -89,7 +89,7 @@ app.post('/register', async (c) => {
   return c.json({ token: await signToken(c.env, authUserFromRow(user)), user: publicUser(user) }, 201);
 });
 
-app.post('/login', async (c) => {
+app.post('/login', rateLimit('login'), async (c) => {
   const body = await c.req.json<Record<string, unknown>>();
   const identifier = validateLoginIdentifier(body.identifier ?? body.email);
   const password = validatePassword(body.password);
@@ -131,7 +131,7 @@ app.post('/verify-email', async (c) => {
   return c.json({ user: publicUser(user) });
 });
 
-app.post('/resend-verification', requireAuth, async (c) => {
+app.post('/resend-verification', requireAuth, rateLimit('resend-verification'), async (c) => {
   const current = c.get('user');
   const user = await getUserById(c.env.DB, current.id);
   if (!user) throw new HTTPException(404, { message: 'User not found' });
@@ -171,7 +171,7 @@ app.post('/change-email', requireAuth, async (c) => {
   return c.json({ user: publicUser(updated) });
 });
 
-app.post('/forgot-password', async (c) => {
+app.post('/forgot-password', rateLimit('forgot-password'), async (c) => {
   const body = await c.req.json<Record<string, unknown>>();
   let email: string | null = null;
 
@@ -203,7 +203,7 @@ app.post('/forgot-password', async (c) => {
   return c.json({ ok: true });
 });
 
-app.post('/reset-password', async (c) => {
+app.post('/reset-password', rateLimit('reset-password'), async (c) => {
   const body = await c.req.json<Record<string, unknown>>();
   const token = requireString(body.token, 'token', 500);
   const password = validatePassword(body.password);
