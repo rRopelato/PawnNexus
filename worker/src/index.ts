@@ -602,7 +602,8 @@ app.put('/pawns/:id', requireAuth, requireVerified, async (c) => {
          switch_friend_id = ?, psn_id = ?, xbox_gamertag = ?, weapon1 = ?, weapon2 = ?,
          head = ?, body = ?, legs = ?, cloak = ?, ring1 = ?, ring2 = ?,
          augment1 = ?, augment2 = ?, augment3 = ?, augment4 = ?, augment5 = ?, augment6 = ?, specialization = ?,
-         image_url = ?, image_urls = ?, thumbnail_url = ?, status = ?, updated_at = datetime('now')
+         image_url = ?, image_urls = ?, thumbnail_url = ?, status = ?,
+         activity_stars = 3, inactive_since = NULL, last_refreshed_at = datetime('now'), updated_at = datetime('now')
      WHERE id = ?`,
   )
     .bind(
