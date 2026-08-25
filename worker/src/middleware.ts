@@ -4,6 +4,20 @@ import { getUserById, isEmailBanned } from './db';
 import { verifyToken } from './auth';
 import type { Env, Variables } from './types';
 
+// ponytail: Cloudflare's native Rate Limiting binding is permissive and
+// eventually consistent (soft abuse deterrent, not a hard guarantee under
+// low/bursty traffic). Upgrade to Durable Objects for exact counting if
+// brute-force attempts actually show up in logs.
+export const rateLimit = (routeKey: string) =>
+  createMiddleware<{ Bindings: Env; Variables: Variables }>(async (c, next) => {
+    const ip = c.req.header('CF-Connecting-IP') ?? 'unknown';
+    const { success } = await c.env.AUTH_RATE_LIMITER.limit({ key: `${routeKey}:${ip}` });
+    if (!success) {
+      throw new HTTPException(429, { message: 'Too many requests, please try again later' });
+    }
+    await next();
+  });
+
 export const requireAuth = createMiddleware<{ Bindings: Env; Variables: Variables }>(async (c, next) => {
   const header = c.req.header('Authorization');
   const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
