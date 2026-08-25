@@ -179,7 +179,7 @@ export function Auth({ mode, onAuth }: Props) {
 
 function FieldError({ id, message }: { id: string; message: string }) {
   return (
-    <p id={id} className="mt-2 text-sm text-red-200">
+    <p id={id} className="mt-2 text-sm text-red-100">
       {message}
     </p>
   );
