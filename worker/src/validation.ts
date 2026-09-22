@@ -215,7 +215,7 @@ function normalizeWeaponSkills(value: unknown) {
     .filter(Boolean);
 
   if (weaponSkills.length === 0) throw new HTTPException(400, { message: 'weaponSkills is required' });
-  if (weaponSkills.length > 4) throw new HTTPException(400, { message: 'weaponSkills must include 4 entries or fewer' });
+  if (weaponSkills.length > 6) throw new HTTPException(400, { message: 'weaponSkills must include 6 entries or fewer' });
   if (weaponSkills.some((skill) => skill.length > 120)) throw new HTTPException(400, { message: 'weaponSkills entries are too long' });
 
   return weaponSkills;

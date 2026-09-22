@@ -11,13 +11,13 @@ type Props = {
   onSubmit: (payload: Partial<Pawn>) => Promise<void>;
 };
 
-const emptyWeaponSkills = ['', '', '', ''];
+const emptyWeaponSkills = ['', '', '', '', '', ''];
 const emptyAugments = ['', '', '', '', '', ''];
 
 export function PawnForm({ initial, onSubmit }: Props) {
   const initialPlatform = initial?.platform as string | undefined;
   const initialImages = [...(initial?.images ?? [])].sort((a, b) => a.sortOrder - b.sortOrder).map((image, sortOrder) => ({ ...image, sortOrder }));
-  const initialWeaponSkills = [...(initial?.weaponSkills ?? initial?.skills ?? []), ...emptyWeaponSkills].slice(0, 4);
+  const initialWeaponSkills = [...(initial?.weaponSkills ?? initial?.skills ?? []), ...emptyWeaponSkills].slice(0, emptyWeaponSkills.length);
   const initialAugments = [initial?.augment1, initial?.augment2, initial?.augment3, initial?.augment4, initial?.augment5, initial?.augment6].map((value) => value ?? '');
   const [payload, setPayload] = useState<Partial<Pawn>>({
     pawnName: initial?.pawnName ?? '',

@@ -30,7 +30,7 @@ export function pawnViewerStatsSelect(viewerId: string | null) {
 
 export function publicPawn(row: PawnRow) {
   const images = parseImages(row.image_urls, row.image_url);
-  const weaponSkills = parseSkills(row.skills).slice(0, 4);
+  const weaponSkills = parseSkills(row.skills).slice(0, 6);
 
   return {
     id: row.id,
